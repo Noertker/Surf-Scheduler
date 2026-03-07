@@ -2,8 +2,8 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
 
-import { DashboardHeader } from '@/components/DashboardHeader';
-import { useColorScheme } from '@/components/useColorScheme';
+import { DashboardHeader } from '@/components/calendar/DashboardHeader';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import Colors from '@/constants/Colors';
 
 export default function TabLayout() {

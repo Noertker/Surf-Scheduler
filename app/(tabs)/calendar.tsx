@@ -1,6 +1,7 @@
-import { CalendarGrid } from '@/components/CalendarGrid';
-import { DayDetail } from '@/components/DayDetail';
-import { Text, View } from '@/components/Themed';
+import { CalendarGrid } from '@/components/calendar/CalendarGrid';
+import { DayDetail } from '@/components/calendar/DayDetail';
+import { Text } from '@/components/shared/Text';
+import { View } from '@/components/shared/View';
 import { fetchSwellData, fetchWindData } from '@/services/openMeteo';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { usePreferenceStore } from '@/stores/usePreferenceStore';

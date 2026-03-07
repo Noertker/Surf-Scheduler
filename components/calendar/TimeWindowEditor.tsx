@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Modal, StyleSheet, Pressable } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { Text, View } from '@/components/Themed';
+import { Text } from '@/components/shared/Text';
+import { View } from '@/components/shared/View';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 
 interface Props {

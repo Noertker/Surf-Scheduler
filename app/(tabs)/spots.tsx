@@ -6,8 +6,9 @@ import {
   Pressable,
   Switch,
 } from 'react-native';
-import { View, Text } from '@/components/Themed';
-import { SpotPreferenceEditor } from '@/components/SpotPreferenceEditor';
+import { View } from '@/components/shared/View';
+import { Text } from '@/components/shared/Text';
+import { SpotPreferenceEditor } from '@/components/spots/SpotPreferenceEditor';
 import { usePreferenceStore } from '@/stores/usePreferenceStore';
 import { fetchAllGroupsWithSpots } from '@/services/spotGroups';
 import { SpotGroup } from '@/types/group';

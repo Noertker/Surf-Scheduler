@@ -5,7 +5,7 @@ import { line, curveNatural } from 'd3-shape';
 import { scaleLinear, scaleTime } from 'd3-scale';
 import { TidePrediction } from '@/types/tide';
 import { DEFAULT_DAY_START, DEFAULT_DAY_END } from '@/utils/tideWindows';
-import { View } from '@/components/Themed';
+import { View } from '@/components/shared/View';
 import { useChartTouch } from '@/hooks/useChartTouch';
 
 interface HighlightWindow {

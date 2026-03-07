@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, StyleSheet, Pressable, Switch } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { Text, View } from '@/components/Themed';
+import { Text } from '@/components/shared/Text';
+import { View } from '@/components/shared/View';
 import { Spot } from '@/types/spot';
 import { usePreferenceStore } from '@/stores/usePreferenceStore';
 

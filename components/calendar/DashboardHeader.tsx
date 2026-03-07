@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Text } from '@/components/Themed';
-import { TimeWindowEditor } from '@/components/TimeWindowEditor';
+import { Text } from '@/components/shared/Text';
+import { TimeWindowEditor } from '@/components/calendar/TimeWindowEditor';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 

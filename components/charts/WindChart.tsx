@@ -5,7 +5,7 @@ import { line, area, curveNatural } from 'd3-shape';
 import { scaleLinear, scaleTime } from 'd3-scale';
 import { WindReading } from '@/types/conditions';
 import { DEFAULT_DAY_START, DEFAULT_DAY_END } from '@/utils/tideWindows';
-import { View } from '@/components/Themed';
+import { View } from '@/components/shared/View';
 import { useChartTouch } from '@/hooks/useChartTouch';
 
 interface Props {

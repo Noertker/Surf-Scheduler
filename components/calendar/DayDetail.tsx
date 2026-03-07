@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Pressable } from 'react-native';
-import { Text, View } from '@/components/Themed';
-import { TideChart } from './TideChart';
-import { WindChart } from './WindChart';
-import { SwellChart } from './SwellChart';
+import { Text } from '@/components/shared/Text';
+import { View } from '@/components/shared/View';
+import { TideChart } from '@/components/charts/TideChart';
+import { WindChart } from '@/components/charts/WindChart';
+import { SwellChart } from '@/components/charts/SwellChart';
 import { TidePrediction, TideWindow } from '@/types/tide';
 import { WindReading, SwellReading } from '@/types/conditions';
 import { formatTimeCompact, localDateKey } from '@/utils/tideWindows';

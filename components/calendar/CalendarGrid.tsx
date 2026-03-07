@@ -1,4 +1,5 @@
-import { Text, View } from '@/components/Themed';
+import { Text } from '@/components/shared/Text';
+import { View } from '@/components/shared/View';
 import { TideWindow } from '@/types/tide';
 import { formatTimeCompact, localDateKey } from '@/utils/tideWindows';
 import React from 'react';
