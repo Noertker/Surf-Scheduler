@@ -108,9 +108,16 @@ export function CalendarGrid({ year, month, dayWindows, onDayPress }: Props) {
                     {spotName}
                   </Text>
                   {spotWindows.map((w, wi) => (
-                    <Text key={wi} style={styles.windowTime} numberOfLines={1}>
-                      {formatTimeCompact(w.start)}-{formatTimeCompact(w.end)}
-                    </Text>
+                    <React.Fragment key={wi}>
+                      <Text style={styles.windowTime} numberOfLines={1}>
+                        {formatTimeCompact(w.start)}-{formatTimeCompact(w.end)}
+                      </Text>
+                      {w.avgSwellFt != null && (
+                        <Text style={styles.conditionsText} numberOfLines={1}>
+                          {w.avgSwellFt}ft {w.avgWindMph}mph g{w.avgGustsMph}
+                        </Text>
+                      )}
+                    </React.Fragment>
                   ))}
                 </View>
               ))}
@@ -195,6 +202,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.6,
     lineHeight: 14,
+  },
+  conditionsText: {
+    fontSize: 9,
+    opacity: 0.5,
+    lineHeight: 11,
   },
   moreText: {
     fontSize: 9,

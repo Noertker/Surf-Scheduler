@@ -7,10 +7,18 @@ import { TidePrediction } from '@/types/tide';
 import { DEFAULT_DAY_START, DEFAULT_DAY_END } from '@/utils/tideWindows';
 import { View } from '@/components/Themed';
 
+interface HighlightWindow {
+  start: Date;
+  end: Date;
+  tideMin: number;
+  tideMax: number;
+}
+
 interface Props {
   predictions: TidePrediction[];
   tideMin?: number;
   tideMax?: number;
+  highlightWindow?: HighlightWindow;
   dayStartHour?: number;
   dayEndHour?: number;
   height?: number;
@@ -22,6 +30,7 @@ export function TideChart({
   predictions,
   tideMin,
   tideMax,
+  highlightWindow,
   dayStartHour = DEFAULT_DAY_START,
   dayEndHour = DEFAULT_DAY_END,
   height = 200,
@@ -88,8 +97,19 @@ export function TideChart({
   return (
     <View style={styles.container}>
       <Svg width={chartWidth} height={height}>
-        {/* Preferred tide range shading */}
-        {tideMin != null && tideMax != null && (
+        {/* Preferred tide range shading — scoped to window if selected */}
+        {highlightWindow && xScale ? (
+          <Rect
+            x={Math.max(PADDING.left, xScale(highlightWindow.start))}
+            y={yScale(highlightWindow.tideMax)}
+            width={Math.max(0,
+              Math.min(xScale(highlightWindow.end), chartWidth - PADDING.right) -
+              Math.max(xScale(highlightWindow.start), PADDING.left)
+            )}
+            height={Math.max(0, yScale(highlightWindow.tideMin) - yScale(highlightWindow.tideMax))}
+            fill="rgba(46, 204, 113, 0.25)"
+          />
+        ) : tideMin != null && tideMax != null ? (
           <Rect
             x={PADDING.left}
             y={yScale(tideMax)}
@@ -97,7 +117,7 @@ export function TideChart({
             height={Math.max(0, yScale(tideMin) - yScale(tideMax))}
             fill="rgba(46, 204, 113, 0.15)"
           />
-        )}
+        ) : null}
 
         {/* Y-axis labels */}
         {yScale.ticks(4).map((tick) => (

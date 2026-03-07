@@ -1,4 +1,5 @@
 import { TidePrediction, TideWindow } from '@/types/tide';
+import { SwellReading, WindReading } from '@/types/conditions';
 
 const MIN_WINDOW_MINUTES = 18; // ignore windows shorter than 3 readings (18 min)
 export const DEFAULT_DAY_START = 5;  // 5 AM
@@ -52,6 +53,8 @@ export function calculateTideWindows(
           spotName,
           startHeight: windowStartH,
           endHeight: windowEndH,
+          tideMinPref: minFt,
+          tideMaxPref: maxFt,
         });
       }
 
@@ -99,4 +102,53 @@ export function formatTimeCompact(date: Date): string {
   const ampm = h >= 12 ? 'p' : 'a';
   const hour = h === 0 ? 12 : h > 12 ? h - 12 : h;
   return m === 0 ? `${hour}${ampm}` : `${hour}:${String(m).padStart(2, '0')}${ampm}`;
+}
+
+/**
+ * Enrich tide windows with average wind/swell conditions.
+ * For each window, finds hourly readings within [start, end] and computes means.
+ * Windows outside the forecast range are left unenriched (fields stay undefined).
+ */
+export function enrichWindowsWithConditions(
+  windows: TideWindow[],
+  wind: WindReading[],
+  swell: SwellReading[]
+): TideWindow[] {
+  if (wind.length === 0 && swell.length === 0) return windows;
+
+  return windows.map((w) => {
+    const startMs = w.start.getTime();
+    const endMs = w.end.getTime();
+
+    const windInRange = wind.filter((r) => {
+      const t = r.timestamp.getTime();
+      return t >= startMs && t <= endMs;
+    });
+
+    const swellInRange = swell.filter((r) => {
+      const t = r.timestamp.getTime();
+      return t >= startMs && t <= endMs;
+    });
+
+    if (windInRange.length === 0 && swellInRange.length === 0) return w;
+
+    const enriched = { ...w };
+
+    if (windInRange.length > 0) {
+      enriched.avgWindMph = Math.round(
+        windInRange.reduce((sum, r) => sum + r.speedMph, 0) / windInRange.length
+      );
+      enriched.avgGustsMph = Math.round(
+        windInRange.reduce((sum, r) => sum + r.gustsMph, 0) / windInRange.length
+      );
+    }
+
+    if (swellInRange.length > 0) {
+      enriched.avgSwellFt = +(
+        swellInRange.reduce((sum, r) => sum + r.heightFt, 0) / swellInRange.length
+      ).toFixed(1);
+    }
+
+    return enriched;
+  });
 }

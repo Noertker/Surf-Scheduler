@@ -8,8 +8,11 @@ import { usePreferenceStore } from '@/stores/usePreferenceStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useTideStore } from '@/stores/useTideStore';
 import { TideWindow } from '@/types/tide';
+import { SwellReading, WindReading } from '@/types/conditions';
+import { fetchSwellData, fetchWindData } from '@/services/openMeteo';
 import {
   calculateTideWindows,
+  enrichWindowsWithConditions,
   groupPredictionsByDay,
   localDateKey,
 } from '@/utils/tideWindows';
@@ -28,6 +31,8 @@ export default function DashboardScreen() {
   } = useTideStore();
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [wind, setWind] = useState<WindReading[]>([]);
+  const [swell, setSwell] = useState<SwellReading[]>([]);
 
   const now = new Date();
   const year = now.getFullYear();
@@ -44,14 +49,23 @@ export default function DashboardScreen() {
     fetchSettings();
   }, []);
 
-  // When active group changes, fetch monthly tides for its station
+  // When active group changes, fetch monthly tides + 7-day conditions
   useEffect(() => {
     if (groupSpots.length === 0) return;
 
-    // All spots in a group share the same NOAA station
-    const stationId = groupSpots[0]?.noaa_station_id;
-    if (stationId) {
-      fetchMonthlyTides(stationId);
+    const spot = groupSpots[0];
+    if (spot?.noaa_station_id) {
+      fetchMonthlyTides(spot.noaa_station_id);
+    }
+
+    // Fetch 7-day wind/swell forecast for the group's region
+    if (spot) {
+      fetchWindData(spot.lat, spot.lng, 7)
+        .then(setWind)
+        .catch(() => setWind([]));
+      fetchSwellData(spot.lat, spot.lng, 7)
+        .then(setSwell)
+        .catch(() => setSwell([]));
     }
   }, [activeGroupId, groupSpots]);
 
@@ -60,6 +74,8 @@ export default function DashboardScreen() {
     const map = new Map<string, TideWindow[]>();
 
     if (monthlyPredictions.length === 0) return map;
+
+    let allWindows: TideWindow[] = [];
 
     for (const spot of groupSpots) {
       const pref = preferences.find((p) => p.spot_id === spot.id);
@@ -75,16 +91,21 @@ export default function DashboardScreen() {
         dayEndHour
       );
 
-      for (const w of windows) {
-        const key = localDateKey(w.start);
-        const arr = map.get(key) ?? [];
-        arr.push(w);
-        map.set(key, arr);
-      }
+      allWindows.push(...windows);
+    }
+
+    // Enrich windows within the 7-day forecast range with wind/swell averages
+    allWindows = enrichWindowsWithConditions(allWindows, wind, swell);
+
+    for (const w of allWindows) {
+      const key = localDateKey(w.start);
+      const arr = map.get(key) ?? [];
+      arr.push(w);
+      map.set(key, arr);
     }
 
     return map;
-  }, [monthlyPredictions, groupSpots, preferences, dayStartHour, dayEndHour]);
+  }, [monthlyPredictions, groupSpots, preferences, dayStartHour, dayEndHour, wind, swell]);
 
   // Get predictions and windows for the selected day
   const selectedDayData = useMemo(() => {
@@ -176,6 +197,8 @@ export default function DashboardScreen() {
           predictions={selectedDayData.predictions}
           hiLo={selectedDayData.hiLo}
           windows={selectedDayData.windows}
+          wind={wind}
+          swell={swell}
           tideMin={representativePref?.tide_min_ft}
           tideMax={representativePref?.tide_max_ft}
           dayStartHour={dayStartHour}

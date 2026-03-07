@@ -11,4 +11,9 @@ export interface TideWindow {
   spotName: string;
   startHeight: number;
   endHeight: number;
+  tideMinPref: number;
+  tideMaxPref: number;
+  avgWindMph?: number;
+  avgGustsMph?: number;
+  avgSwellFt?: number;
 }
