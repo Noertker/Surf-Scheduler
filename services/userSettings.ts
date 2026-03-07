@@ -1,13 +1,12 @@
-import { supabase } from './supabase';
+import { supabase, getUserId } from './supabase';
 import { UserSettings } from '@/types/spot';
 
 export async function fetchUserSettings(): Promise<UserSettings | null> {
-  const { data, error } = await supabase
-    .from('user_settings')
-    .select('*')
-    .is('user_id', null)
-    .single();
+  const uid = getUserId();
+  let query = supabase.from('user_settings').select('*');
+  query = uid ? query.eq('user_id', uid) : query.is('user_id', null);
 
+  const { data, error } = await query.single();
   if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
   return (data as UserSettings) ?? null;
 }

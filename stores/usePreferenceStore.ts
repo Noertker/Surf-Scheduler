@@ -4,6 +4,7 @@ import {
   fetchSpotPreferences,
   upsertSpotPreference,
 } from '@/services/spotPreferences';
+import { getUserId } from '@/services/supabase';
 
 interface PreferenceState {
   preferences: SpotPreference[];
@@ -27,7 +28,7 @@ export const usePreferenceStore = create<PreferenceState>((set, get) => ({
   fetchPreferences: async () => {
     set({ loading: true, error: null });
     try {
-      const prefs = await fetchSpotPreferences(null);
+      const prefs = await fetchSpotPreferences(getUserId());
       set({ preferences: prefs, loading: false });
     } catch (err) {
       set({ error: (err as Error).message, loading: false });
@@ -37,7 +38,7 @@ export const usePreferenceStore = create<PreferenceState>((set, get) => ({
   savePreference: async (spotId, tideMin, tideMax, enabled) => {
     try {
       const saved = await upsertSpotPreference({
-        user_id: null,
+        user_id: getUserId(),
         spot_id: spotId,
         tide_min_ft: tideMin,
         tide_max_ft: tideMax,

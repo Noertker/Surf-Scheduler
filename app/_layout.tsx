@@ -6,6 +6,11 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useSessionStore } from '@/stores/useSessionStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
+import { usePreferenceStore } from '@/stores/usePreferenceStore';
+import { useSurfboardStore } from '@/stores/useSurfboardStore';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -23,6 +28,11 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+
+  // Initialize auth on mount
+  useEffect(() => {
+    useAuthStore.getState().initialize();
+  }, []);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -42,11 +52,26 @@ export default function RootLayout() {
   return <RootLayoutNav />;
 }
 
+/** Re-fetches all user-scoped stores when auth state changes. */
+function AuthRefreshBridge() {
+  const userId = useAuthStore((s) => s.user?.id);
+
+  useEffect(() => {
+    useSessionStore.getState().fetchSessions();
+    useSettingsStore.getState().fetchSettings();
+    usePreferenceStore.getState().fetchPreferences();
+    useSurfboardStore.getState().fetchBoards();
+  }, [userId]);
+
+  return null;
+}
+
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <AuthRefreshBridge />
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>

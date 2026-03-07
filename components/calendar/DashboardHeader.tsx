@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '@/components/shared/Text';
+import { View as ThemedView } from '@/components/shared/View';
 import { TimeWindowEditor } from '@/components/calendar/TimeWindowEditor';
 import { ThemeColors } from '@/constants/theme';
 import { useColors } from '@/hooks/useColors';
@@ -16,28 +17,26 @@ export function DashboardHeader() {
   const { dayStartHour, dayEndHour } = useSettingsStore();
   const { mode, toggleTheme } = useThemeStore();
   const [showTimeSettings, setShowTimeSettings] = useState(false);
+  const [showRegionPicker, setShowRegionPicker] = useState(false);
+
+  const activeGroup = groups.find((g) => g.id === activeGroupId);
 
   const fmtHour = (h: number) =>
     `${h > 12 ? h - 12 : h}${h >= 12 ? 'PM' : 'AM'}`;
 
   return (
     <View style={styles.container}>
-      <View style={styles.pillRow}>
-        {groups.map((group) => {
-          const active = group.id === activeGroupId;
-          return (
-            <Pressable
-              key={group.id}
-              onPress={() => setActiveGroup(group.id)}
-              style={[styles.pill, active && styles.activePill]}
-            >
-              <Text style={[styles.label, active && styles.activeLabel]}>
-                {group.name}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {/* Region dropdown */}
+      <Pressable
+        onPress={() => setShowRegionPicker(true)}
+        style={styles.dropdown}
+      >
+        <Text style={styles.dropdownText} numberOfLines={1}>
+          {activeGroup?.name ?? 'Select Region'}
+        </Text>
+        <Text style={styles.dropdownArrow}>{'\u25BE'}</Text>
+      </Pressable>
+
       <Pressable onPress={() => setShowTimeSettings(true)} style={styles.timeBadge}>
         <Text style={styles.timeText}>
           {fmtHour(dayStartHour)}-{fmtHour(dayEndHour)}
@@ -46,10 +45,48 @@ export function DashboardHeader() {
       <Pressable onPress={toggleTheme} hitSlop={8} style={styles.themeBadge}>
         <Text style={styles.themeIcon}>{mode === 'dark' ? '\u2600' : '\u263E'}</Text>
       </Pressable>
+
       <TimeWindowEditor
         visible={showTimeSettings}
         onClose={() => setShowTimeSettings(false)}
       />
+
+      {/* Region picker modal */}
+      <Modal
+        visible={showRegionPicker}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowRegionPicker(false)}
+      >
+        <Pressable
+          style={styles.overlay}
+          onPress={() => setShowRegionPicker(false)}
+        >
+          <ThemedView style={styles.pickerSheet}>
+            <Text style={styles.pickerTitle}>Select Region</Text>
+            <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+              {groups.map((group) => {
+                const isActive = group.id === activeGroupId;
+                return (
+                  <Pressable
+                    key={group.id}
+                    onPress={() => {
+                      setActiveGroup(group.id);
+                      setShowRegionPicker(false);
+                    }}
+                    style={[styles.pickerItem, isActive && styles.pickerItemActive]}
+                  >
+                    <Text style={[styles.pickerItemText, isActive && styles.pickerItemTextActive]}>
+                      {group.name}
+                    </Text>
+                    {isActive && <Text style={styles.pickerCheck}>{'\u2713'}</Text>}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </ThemedView>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -60,30 +97,27 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  pillRow: {
+  dropdown: {
     flexDirection: 'row',
-    gap: 6,
-  },
-  pill: {
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.cardAlt,
+    gap: 6,
+    maxWidth: 200,
   },
-  activePill: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  label: {
-    fontSize: 11,
+  dropdownText: {
+    fontSize: 12,
     fontWeight: '600',
-    color: colors.textTertiary,
-    letterSpacing: 0.5,
+    color: colors.text,
+    flexShrink: 1,
   },
-  activeLabel: {
-    color: '#fff',
+  dropdownArrow: {
+    fontSize: 10,
+    color: colors.textDim,
   },
   timeBadge: {
     paddingHorizontal: 8,
@@ -101,5 +135,53 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   themeIcon: {
     fontSize: 16,
     color: colors.textDim,
+  },
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  pickerSheet: {
+    width: 280,
+    maxHeight: '70%',
+    borderRadius: 14,
+    padding: 16,
+    backgroundColor: colors.card,
+  },
+  pickerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  pickerScroll: {
+    maxHeight: 400,
+  },
+  pickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  pickerItemActive: {
+    backgroundColor: colors.primaryDark,
+  },
+  pickerItemText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  pickerItemTextActive: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  pickerCheck: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.primary,
   },
 });

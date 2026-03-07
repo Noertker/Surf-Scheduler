@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { DEFAULT_DAY_START, DEFAULT_DAY_END } from '@/utils/tideWindows';
 import { fetchUserSettings, upsertUserSettings } from '@/services/userSettings';
+import { getUserId } from '@/services/supabase';
 
 interface SettingsState {
   dayStartHour: number;
@@ -40,7 +41,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       const finalStart = Math.min(startHour, endHour);
       const finalEnd = Math.max(startHour, endHour);
       await upsertUserSettings({
-        user_id: null,
+        user_id: getUserId(),
         day_start_hour: finalStart,
         day_end_hour: finalEnd,
       });

@@ -122,8 +122,9 @@ export function DayDetail({
       ? +(swellInRange.reduce((s, r) => s + r.heightFt, 0) / swellInRange.length).toFixed(1)
       : w.avgSwellFt ?? null;
 
+    const { getUserId } = require('@/services/supabase');
     await addSession({
-      user_id: null, spot_id: w.spotId, spot_name: w.spotName,
+      user_id: getUserId(), spot_id: w.spotId, spot_name: w.spotName,
       planned_start: customStart.toISOString(), planned_end: customEnd.toISOString(),
       tide_start_ft: tideStart, tide_end_ft: tideEnd,
       avg_wind_mph: avgWind, avg_gusts_mph: avgGusts, avg_swell_ft: avgSwell,

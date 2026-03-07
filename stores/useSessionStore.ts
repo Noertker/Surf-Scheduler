@@ -1,6 +1,12 @@
 import { create } from 'zustand';
-import { supabase } from '@/services/supabase';
+import { supabase, getUserId } from '@/services/supabase';
 import { SurfSession, WaveType } from '@/types/session';
+import {
+  createGCalEvent,
+  updateGCalEvent,
+  deleteGCalEvent,
+  isGCalAvailable,
+} from '@/services/googleCalendar';
 
 type SessionUpdates = Partial<Pick<SurfSession,
   'planned_start' | 'planned_end' | 'notes' |
@@ -23,7 +29,7 @@ interface SessionState {
   }) => Promise<void>;
 }
 
-export const useSessionStore = create<SessionState>((set) => ({
+export const useSessionStore = create<SessionState>((set, get) => ({
   sessions: [],
   loading: false,
   error: null,
@@ -31,12 +37,14 @@ export const useSessionStore = create<SessionState>((set) => ({
   fetchSessions: async () => {
     set({ loading: true, error: null });
     try {
-      const { data, error } = await supabase
+      const uid = getUserId();
+      let query = supabase
         .from('surf_sessions')
         .select('*')
-        .is('user_id', null)
         .order('planned_start', { ascending: true });
+      query = uid ? query.eq('user_id', uid) : query.is('user_id', null);
 
+      const { data, error } = await query;
       if (error) throw error;
       set({ sessions: (data ?? []) as SurfSession[], loading: false });
     } catch (err) {
@@ -61,6 +69,24 @@ export const useSessionStore = create<SessionState>((set) => ({
             new Date(b.planned_start).getTime()
         ),
       }));
+
+      // Auto-sync to Google Calendar (non-blocking)
+      if (await isGCalAvailable()) {
+        try {
+          const gcalEventId = await createGCalEvent(saved);
+          await supabase
+            .from('surf_sessions')
+            .update({ gcal_event_id: gcalEventId })
+            .eq('id', saved.id);
+          set((state) => ({
+            sessions: state.sessions.map((s) =>
+              s.id === saved.id ? { ...s, gcal_event_id: gcalEventId } : s
+            ),
+          }));
+        } catch (err) {
+          console.warn('Google Calendar sync failed:', err);
+        }
+      }
     } catch (err) {
       set({ error: (err as Error).message });
     }
@@ -86,12 +112,22 @@ export const useSessionStore = create<SessionState>((set) => ({
               new Date(b.planned_start).getTime()
           ),
       }));
+
+      // Auto-sync update to Google Calendar (non-blocking)
+      if (updated.gcal_event_id && (await isGCalAvailable())) {
+        try {
+          await updateGCalEvent(updated.gcal_event_id, updated);
+        } catch (err) {
+          console.warn('Google Calendar update failed:', err);
+        }
+      }
     } catch (err) {
       set({ error: (err as Error).message });
     }
   },
 
   removeSession: async (id) => {
+    const sessionToDelete = get().sessions.find((s) => s.id === id);
     try {
       const { error } = await supabase
         .from('surf_sessions')
@@ -102,6 +138,15 @@ export const useSessionStore = create<SessionState>((set) => ({
       set((state) => ({
         sessions: state.sessions.filter((s) => s.id !== id),
       }));
+
+      // Auto-delete from Google Calendar (non-blocking)
+      if (sessionToDelete?.gcal_event_id && (await isGCalAvailable())) {
+        try {
+          await deleteGCalEvent(sessionToDelete.gcal_event_id);
+        } catch (err) {
+          console.warn('Google Calendar delete failed:', err);
+        }
+      }
     } catch (err) {
       set({ error: (err as Error).message });
     }
