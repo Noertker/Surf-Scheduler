@@ -26,6 +26,25 @@ export interface OpenMeteoMarineResponse {
   };
 }
 
+// Open-Meteo Marine API response (detailed swell — primary + secondary + combined)
+export interface OpenMeteoDetailedMarineResponse {
+  latitude: number;
+  longitude: number;
+  hourly: {
+    time: string[];
+    swell_wave_height: (number | null)[];
+    swell_wave_direction: (number | null)[];
+    swell_wave_period: (number | null)[];
+    swell_wave_peak_period: (number | null)[];
+    secondary_swell_wave_height: (number | null)[];
+    secondary_swell_wave_direction: (number | null)[];
+    secondary_swell_wave_period: (number | null)[];
+    wave_height: (number | null)[];
+    wave_direction: (number | null)[];
+    wave_period: (number | null)[];
+  };
+}
+
 // Open-Meteo Weather API response (wind)
 export interface OpenMeteoWindResponse {
   latitude: number;

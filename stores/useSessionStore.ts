@@ -8,6 +8,7 @@ interface SessionState {
   error: string | null;
   fetchSessions: () => Promise<void>;
   addSession: (session: Omit<SurfSession, 'id' | 'created_at'>) => Promise<void>;
+  updateSession: (id: string, updates: Partial<Pick<SurfSession, 'planned_start' | 'planned_end' | 'notes'>>) => Promise<void>;
   removeSession: (id: string) => Promise<void>;
 }
 
@@ -48,6 +49,31 @@ export const useSessionStore = create<SessionState>((set) => ({
             new Date(a.planned_start).getTime() -
             new Date(b.planned_start).getTime()
         ),
+      }));
+    } catch (err) {
+      set({ error: (err as Error).message });
+    }
+  },
+
+  updateSession: async (id, updates) => {
+    try {
+      const { data, error } = await supabase
+        .from('surf_sessions')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      const updated = data as SurfSession;
+      set((state) => ({
+        sessions: state.sessions
+          .map((s) => (s.id === id ? updated : s))
+          .sort(
+            (a, b) =>
+              new Date(a.planned_start).getTime() -
+              new Date(b.planned_start).getTime()
+          ),
       }));
     } catch (err) {
       set({ error: (err as Error).message });

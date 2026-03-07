@@ -3,13 +3,13 @@ import { Dimensions } from 'react-native';
 import Svg, { Path, Line, Text as SvgText, Circle, Rect } from 'react-native-svg';
 import { line, area, curveNatural } from 'd3-shape';
 import { scaleLinear, scaleTime } from 'd3-scale';
-import { WindReading } from '@/types/conditions';
+import { SwellReading } from '@/types/conditions';
 import { DEFAULT_DAY_START, DEFAULT_DAY_END } from '@/utils/tideWindows';
 import { View } from '@/components/Themed';
 import { useChartTouch } from '@/hooks/useChartTouch';
 
 interface Props {
-  wind: WindReading[];
+  swell: SwellReading[];
   dayStartHour?: number;
   dayEndHour?: number;
   height?: number;
@@ -22,34 +22,31 @@ const degToCompass = (d: number) => {
   return dirs[Math.round(d / 22.5) % 16];
 };
 
-export function WindChart({
-  wind,
+export function SwellChart({
+  swell,
   dayStartHour = DEFAULT_DAY_START,
   dayEndHour = DEFAULT_DAY_END,
-  height = 140,
+  height = 160,
 }: Props) {
   const chartWidth = Dimensions.get('window').width - 32;
 
-  const { speedPath, gustArea, xScale, yScale, ticks, filtered } = useMemo(() => {
-    if (wind.length === 0) {
-      return { speedPath: '', gustArea: '', xScale: null, yScale: null, ticks: [], filtered: [] };
-    }
+  const { heightPath, heightArea, xScale, yScale, ticks, filtered } = useMemo(() => {
+    const empty = { heightPath: '', heightArea: '', xScale: null, yScale: null, ticks: [], filtered: [] as SwellReading[] };
+    if (swell.length === 0) return empty;
 
-    const refDate = wind[0].timestamp;
+    const refDate = swell[0].timestamp;
     const dayStart = new Date(refDate);
     dayStart.setHours(dayStartHour, 0, 0, 0);
     const dayEnd = new Date(refDate);
     dayEnd.setHours(dayEndHour, 0, 0, 0);
 
-    const f = wind.filter(
+    const f = swell.filter(
       (r) => r.timestamp >= dayStart && r.timestamp <= dayEnd
     );
-    if (f.length === 0) {
-      return { speedPath: '', gustArea: '', xScale: null, yScale: null, ticks: [], filtered: [] };
-    }
+    if (f.length === 0) return empty;
 
-    const maxGust = Math.max(...f.map((r) => r.gustsMph));
-    const yMax = Math.ceil(maxGust / 5) * 5 + 5;
+    const maxH = Math.max(...f.map((r) => r.heightFt));
+    const yMax = Math.ceil(maxH) + 1;
 
     const xS = scaleTime()
       .domain([dayStart, dayEnd])
@@ -59,15 +56,15 @@ export function WindChart({
       .domain([0, yMax])
       .range([height - PADDING.bottom, PADDING.top]);
 
-    const speedLine = line<WindReading>()
+    const hLine = line<SwellReading>()
       .x((d) => xS(d.timestamp))
-      .y((d) => yS(d.speedMph))
+      .y((d) => yS(d.heightFt))
       .curve(curveNatural);
 
-    const gustAreaGen = area<WindReading>()
+    const hArea = area<SwellReading>()
       .x((d) => xS(d.timestamp))
-      .y0((d) => yS(d.speedMph))
-      .y1((d) => yS(d.gustsMph))
+      .y0(yS(0))
+      .y1((d) => yS(d.heightFt))
       .curve(curveNatural);
 
     const timeTicks: Date[] = [];
@@ -79,14 +76,14 @@ export function WindChart({
     }
 
     return {
-      speedPath: speedLine(f) ?? '',
-      gustArea: gustAreaGen(f) ?? '',
+      heightPath: hLine(f) ?? '',
+      heightArea: hArea(f) ?? '',
       xScale: xS,
       yScale: yS,
       ticks: timeTicks,
       filtered: f,
     };
-  }, [wind, chartWidth, height, dayStartHour, dayEndHour]);
+  }, [swell, chartWidth, height, dayStartHour, dayEndHour]);
 
   const dataXPositions = useMemo(
     () => (xScale && filtered.length > 0 ? filtered.map((r) => xScale(r.timestamp)) : []),
@@ -99,7 +96,7 @@ export function WindChart({
     chartWidth - PADDING.right
   );
 
-  if (!speedPath || !xScale || !yScale) {
+  if (!heightPath || !xScale || !yScale) {
     return null;
   }
 
@@ -108,7 +105,7 @@ export function WindChart({
   return (
     <View style={{ alignItems: 'center' }} {...panHandlers}>
       <Svg width={chartWidth} height={height}>
-        {/* Y-axis labels (mph) */}
+        {/* Y-axis labels (ft) */}
         {yScale.ticks(4).map((tick) => (
           <SvgText
             key={`y-${tick}`}
@@ -147,11 +144,11 @@ export function WindChart({
           />
         ))}
 
-        {/* Gust area (shaded between speed and gusts) */}
-        <Path d={gustArea} fill="rgba(231, 76, 60, 0.15)" />
+        {/* Swell height area fill */}
+        <Path d={heightArea} fill="rgba(52, 152, 219, 0.15)" />
 
-        {/* Wind speed line */}
-        <Path d={speedPath} fill="none" stroke="#e74c3c" strokeWidth={2} />
+        {/* Swell height line */}
+        <Path d={heightPath} fill="none" stroke="#3498db" strokeWidth={2} />
 
         {/* Touch crosshair */}
         {touchX != null && activeReading && (
@@ -167,33 +164,27 @@ export function WindChart({
             />
             <Circle
               cx={dataXPositions[activeIndex!]}
-              cy={yScale(activeReading.speedMph)}
+              cy={yScale(activeReading.heightFt)}
               r={4}
-              fill="#e74c3c"
-            />
-            <Circle
-              cx={dataXPositions[activeIndex!]}
-              cy={yScale(activeReading.gustsMph)}
-              r={3}
-              fill="rgba(231, 76, 60, 0.5)"
+              fill="#3498db"
             />
             {/* Label background */}
             <Rect
-              x={clampLabelX(dataXPositions[activeIndex!] - 62, PADDING.left, chartWidth - PADDING.right - 124)}
+              x={clampLabelX(dataXPositions[activeIndex!] - 70, PADDING.left, chartWidth - PADDING.right - 140)}
               y={0}
-              width={124}
+              width={140}
               height={18}
               rx={4}
               fill="rgba(0,0,0,0.75)"
             />
             <SvgText
-              x={clampLabelX(dataXPositions[activeIndex!], PADDING.left + 62, chartWidth - PADDING.right - 62)}
+              x={clampLabelX(dataXPositions[activeIndex!], PADDING.left + 70, chartWidth - PADDING.right - 70)}
               y={13}
               fontSize={11}
               fill="#fff"
               textAnchor="middle"
               fontWeight="600">
-              {Math.round(activeReading.speedMph)}mph {degToCompass(activeReading.directionDeg)} g{Math.round(activeReading.gustsMph)}
+              {activeReading.heightFt}ft @ {Math.round(activeReading.periodS)}s {degToCompass(activeReading.directionDeg)}
             </SvgText>
           </>
         )}

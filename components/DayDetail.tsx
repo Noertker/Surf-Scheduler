@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { TideChart } from './TideChart';
 import { WindChart } from './WindChart';
+import { SwellChart } from './SwellChart';
 import { TidePrediction, TideWindow } from '@/types/tide';
 import { WindReading, SwellReading } from '@/types/conditions';
 import { formatTimeCompact, localDateKey } from '@/utils/tideWindows';
@@ -21,6 +22,8 @@ interface Props {
   dayStartHour?: number;
   dayEndHour?: number;
   onClose: () => void;
+  onPrevDay?: () => void;
+  onNextDay?: () => void;
 }
 
 export function DayDetail({
@@ -36,6 +39,8 @@ export function DayDetail({
   dayStartHour,
   dayEndHour,
   onClose,
+  onPrevDay,
+  onNextDay,
 }: Props) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(0);
   const [schedulingIdx, setSchedulingIdx] = useState<number | null>(null);
@@ -43,6 +48,12 @@ export function DayDetail({
   const [customEnd, setCustomEnd] = useState<Date | null>(null);
 
   const { addSession } = useSessionStore();
+
+  // Reset state when navigating between days
+  useEffect(() => {
+    setSelectedIdx(0);
+    setSchedulingIdx(null);
+  }, [date.getTime()]);
 
   const dateStr = date.toLocaleDateString('default', {
     weekday: 'long',
@@ -60,14 +71,6 @@ export function DayDetail({
     () => swell.filter((r) => localDateKey(r.timestamp) === dayKey),
     [swell, dayKey]
   );
-
-  // Average swell for the day
-  const avgSwell = useMemo(() => {
-    if (daySwell.length === 0) return null;
-    const avgHt = daySwell.reduce((s, r) => s + r.heightFt, 0) / daySwell.length;
-    const avgPeriod = daySwell.reduce((s, r) => s + r.periodS, 0) / daySwell.length;
-    return { heightFt: +avgHt.toFixed(1), periodS: Math.round(avgPeriod) };
-  }, [daySwell]);
 
   // Sort windows by start time
   const sortedWindows = useMemo(
@@ -165,7 +168,19 @@ export function DayDetail({
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <Text style={styles.title}>{dateStr}</Text>
+            <View style={styles.navRow}>
+              {onPrevDay ? (
+                <Pressable onPress={onPrevDay} hitSlop={12} style={styles.navArrow}>
+                  <Text style={styles.navArrowText}>‹</Text>
+                </Pressable>
+              ) : <View style={styles.navArrow} />}
+              <Text style={styles.title}>{dateStr}</Text>
+              {onNextDay ? (
+                <Pressable onPress={onNextDay} hitSlop={12} style={styles.navArrow}>
+                  <Text style={styles.navArrowText}>›</Text>
+                </Pressable>
+              ) : <View style={styles.navArrow} />}
+            </View>
             <Pressable onPress={onClose} hitSlop={12}>
               <Text style={styles.closeButton}>X</Text>
             </Pressable>
@@ -301,14 +316,18 @@ export function DayDetail({
                   dayStartHour={dayStartHour}
                   dayEndHour={dayEndHour}
                 />
-                {avgSwell && (
-                  <View style={styles.swellRow}>
-                    <Text style={styles.swellLabel}>Avg Swell</Text>
-                    <Text style={styles.swellValue}>
-                      {avgSwell.heightFt} ft @ {avgSwell.periodS}s
-                    </Text>
-                  </View>
-                )}
+              </View>
+            )}
+
+            {/* Swell Chart */}
+            {daySwell.length > 0 && (
+              <View style={styles.windSection}>
+                <Text style={styles.sectionTitle}>Swell (ft)</Text>
+                <SwellChart
+                  swell={daySwell}
+                  dayStartHour={dayStartHour}
+                  dayEndHour={dayEndHour}
+                />
               </View>
             )}
           </ScrollView>
@@ -337,9 +356,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  navArrow: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navArrowText: {
+    fontSize: 28,
+    fontWeight: '600',
+    opacity: 0.5,
+    lineHeight: 32,
+  },
   title: {
     fontSize: 18,
     fontWeight: '700',
+    textAlign: 'center',
+    flex: 1,
   },
   closeButton: {
     fontSize: 18,
@@ -450,22 +489,6 @@ const styles = StyleSheet.create({
   },
   windSection: {
     marginTop: 20,
-  },
-  swellRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-    gap: 8,
-  },
-  swellLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    opacity: 0.6,
-  },
-  swellValue: {
-    fontSize: 15,
-    fontWeight: '700',
   },
   scheduleForm: {
     marginTop: -4,

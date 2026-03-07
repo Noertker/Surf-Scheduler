@@ -204,6 +204,16 @@ export default function DashboardScreen() {
           dayStartHour={dayStartHour}
           dayEndHour={dayEndHour}
           onClose={() => setSelectedDate(null)}
+          onPrevDay={() => {
+            const prev = new Date(selectedDate);
+            prev.setDate(prev.getDate() - 1);
+            setSelectedDate(prev);
+          }}
+          onNextDay={() => {
+            const next = new Date(selectedDate);
+            next.setDate(next.getDate() + 1);
+            setSelectedDate(next);
+          }}
         />
       )}
     </View>

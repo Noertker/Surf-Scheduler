@@ -2,8 +2,8 @@ import { TidePrediction, TideWindow } from '@/types/tide';
 import { SwellReading, WindReading } from '@/types/conditions';
 
 const MIN_WINDOW_MINUTES = 18; // ignore windows shorter than 3 readings (18 min)
-export const DEFAULT_DAY_START = 5;  // 5 AM
-export const DEFAULT_DAY_END = 21;   // 9 PM
+export const DEFAULT_DAY_START = 7;  // 7 AM
+export const DEFAULT_DAY_END = 19;   // 7 PM
 
 /**
  * Scans 6-minute TidePredictions and returns contiguous time windows
