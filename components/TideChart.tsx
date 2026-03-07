@@ -23,13 +23,27 @@ export function TideChart({ predictions, tideMin, tideMax, height = 200 }: Props
       return { pathD: '', xScale: null, yScale: null, ticks: [] };
     }
 
-    const heights = predictions.map((p) => p.heightFt);
+    // Fixed 5am–9pm window
+    const refDate = predictions[0].timestamp;
+    const dayStart = new Date(refDate);
+    dayStart.setHours(5, 0, 0, 0);
+    const dayEnd = new Date(refDate);
+    dayEnd.setHours(21, 0, 0, 0);
+
+    const filtered = predictions.filter(
+      (p) => p.timestamp >= dayStart && p.timestamp <= dayEnd
+    );
+    if (filtered.length === 0) {
+      return { pathD: '', xScale: null, yScale: null, ticks: [] };
+    }
+
+    const heights = filtered.map((p) => p.heightFt);
     const minH = Math.min(...heights);
     const maxH = Math.max(...heights);
     const yPad = (maxH - minH) * 0.15 || 0.5;
 
     const xS = scaleTime()
-      .domain([predictions[0].timestamp, predictions[predictions.length - 1].timestamp])
+      .domain([dayStart, dayEnd])
       .range([PADDING.left, chartWidth - PADDING.right]);
 
     const yS = scaleLinear()
@@ -41,20 +55,16 @@ export function TideChart({ predictions, tideMin, tideMax, height = 200 }: Props
       .y((d) => yS(d.heightFt))
       .curve(curveNatural);
 
-    // Generate time ticks (every 3 hours)
-    const start = predictions[0].timestamp;
-    const end = predictions[predictions.length - 1].timestamp;
+    // Ticks every 3 hours from 6am to 9pm
     const timeTicks: Date[] = [];
-    const t = new Date(start);
-    t.setMinutes(0, 0, 0);
-    t.setHours(Math.ceil(t.getHours() / 3) * 3);
-    while (t <= end) {
-      timeTicks.push(new Date(t));
-      t.setHours(t.getHours() + 3);
+    for (let h = 6; h <= 21; h += 3) {
+      const tick = new Date(refDate);
+      tick.setHours(h, 0, 0, 0);
+      timeTicks.push(tick);
     }
 
     return {
-      pathD: lineGen(predictions) ?? '',
+      pathD: lineGen(filtered) ?? '',
       xScale: xS,
       yScale: yS,
       ticks: timeTicks,

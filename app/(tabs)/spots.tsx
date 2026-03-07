@@ -1,11 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import { View } from '@/components/Themed';
 import { SpotCard } from '@/components/SpotCard';
 import { SpotConditions } from '@/components/SpotConditions';
+import { SpotPreferenceEditor } from '@/components/SpotPreferenceEditor';
 import { useSpotStore, useSelectedSpot } from '@/stores/useSpotStore';
 import { useTideStore } from '@/stores/useTideStore';
 import { useConditionsStore } from '@/stores/useConditionsStore';
+import { usePreferenceStore } from '@/stores/usePreferenceStore';
+import { Spot } from '@/types/spot';
 
 export default function SpotsScreen() {
   const { spots, selectedSpotId, loading, fetchSpots, selectSpot } =
@@ -23,9 +26,14 @@ export default function SpotsScreen() {
     wind,
     loading: conditionsLoading,
   } = useConditionsStore();
+  const { preferences, fetchPreferences, getPreferenceForSpot } =
+    usePreferenceStore();
+
+  const [editingSpot, setEditingSpot] = useState<Spot | null>(null);
 
   useEffect(() => {
     fetchSpots();
+    fetchPreferences();
   }, []);
 
   // When selected spot changes, fetch its data
@@ -41,6 +49,11 @@ export default function SpotsScreen() {
     }
     fetchConditions(selectedSpot.lat, selectedSpot.lng);
   }, [selectedSpotId]);
+
+  // Get the active spot's preference for chart shading
+  const activePref = selectedSpot
+    ? getPreferenceForSpot(selectedSpot.id)
+    : undefined;
 
   if (loading) {
     return (
@@ -61,7 +74,9 @@ export default function SpotsScreen() {
           <SpotCard
             spot={item}
             selected={item.id === selectedSpotId}
+            hasPreference={!!getPreferenceForSpot(item.id)}
             onPress={() => selectSpot(item.id)}
+            onLongPress={() => setEditingSpot(item)}
           />
         )}
         contentContainerStyle={styles.spotList}
@@ -72,7 +87,16 @@ export default function SpotsScreen() {
         swell={swell}
         wind={wind}
         loading={tidesLoading || conditionsLoading}
+        tideMin={activePref?.tide_min_ft}
+        tideMax={activePref?.tide_max_ft}
       />
+      {editingSpot && (
+        <SpotPreferenceEditor
+          visible={!!editingSpot}
+          spot={editingSpot}
+          onClose={() => setEditingSpot(null)}
+        />
+      )}
     </View>
   );
 }
