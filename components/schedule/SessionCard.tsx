@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
+import { CalendarSyncButton } from '@/components/schedule/CalendarSyncButton';
 import { LiveForecast, degToCompass } from '@/hooks/useScheduleForecasts';
 import { SurfSession } from '@/types/session';
 import { useColors } from '@/hooks/useColors';
@@ -11,11 +12,12 @@ interface Props {
   session: SurfSession;
   forecast?: LiveForecast;
   onDelete: () => void;
-  onUpdate: (id: string, updates: Partial<Pick<SurfSession, 'planned_start' | 'planned_end' | 'notes'>>) => Promise<void>;
+  onUpdate: (id: string, updates: Record<string, unknown>) => Promise<void>;
+  onLogResults?: () => void;
   isPast?: boolean;
 }
 
-export function SessionCard({ session, forecast, onDelete, onUpdate, isPast }: Props) {
+export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResults, isPast }: Props) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [editing, setEditing] = useState(false);
@@ -117,11 +119,19 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, isPast }: P
             ) : null}
           </View>
 
-          {/* Right: Edit + X */}
+          {/* Right: Edit + Sync + Log + X */}
           <View style={styles.cardActions}>
             {!isPast && !editing && (
-              <Pressable onPress={handleEditStart} hitSlop={8} style={styles.editBtn}>
-                <Text style={styles.editText}>Edit</Text>
+              <>
+                <Pressable onPress={handleEditStart} hitSlop={8} style={styles.editBtn}>
+                  <Text style={styles.editText}>Edit</Text>
+                </Pressable>
+                <CalendarSyncButton session={session} />
+              </>
+            )}
+            {isPast && !session.completed && onLogResults && (
+              <Pressable onPress={onLogResults} hitSlop={8} style={styles.editBtn}>
+                <Text style={styles.editText}>Log</Text>
               </Pressable>
             )}
             <Pressable onPress={onDelete} hitSlop={8} style={styles.deleteBtn}>
@@ -129,6 +139,18 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, isPast }: P
             </Pressable>
           </View>
         </View>
+
+        {/* Results row for completed sessions */}
+        {session.completed && (
+          <View style={styles.resultsRow}>
+            <Text style={styles.resultStars}>
+              {'\u2605'.repeat(session.rating ?? 0)}{'\u2606'.repeat(5 - (session.rating ?? 0))}
+            </Text>
+            {session.wave_type && (
+              <Text style={styles.resultTag}>{session.wave_type}</Text>
+            )}
+          </View>
+        )}
 
         {/* Edit mode */}
         {editing && editStart && editEnd && (
@@ -321,5 +343,30 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 12,
     color: colors.textFaint,
     marginTop: 2,
+  },
+  resultsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    backgroundColor: 'transparent',
+  },
+  resultStars: {
+    fontSize: 14,
+    color: colors.warning,
+  },
+  resultTag: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textTertiary,
+    backgroundColor: colors.cardAlt,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    overflow: 'hidden',
+    textTransform: 'capitalize',
   },
 });

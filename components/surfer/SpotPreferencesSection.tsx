@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ScrollView,
-  StyleSheet,
   ActivityIndicator,
   Pressable,
+  StyleSheet,
   Switch,
 } from 'react-native';
 import { View } from '@/components/shared/View';
@@ -21,7 +20,7 @@ interface GroupWithSpots {
   spots: Spot[];
 }
 
-export default function SpotsScreen() {
+export function SpotPreferencesSection() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [groupsData, setGroupsData] = useState<GroupWithSpots[]>([]);
@@ -76,57 +75,55 @@ export default function SpotsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.listContent}>
-        {groupsData.map(({ group, spots }) => {
-          const expanded = expandedGroups.has(group.id);
-          return (
-            <View key={group.id} style={styles.groupContainer}>
-              <Pressable
-                style={styles.groupHeader}
-                onPress={() => toggleGroup(group.id)}
-              >
-                <Text style={styles.groupArrow}>
-                  {expanded ? '\u25BC' : '\u25B6'}
-                </Text>
-                <Text style={styles.groupName}>{group.name}</Text>
-                <Text style={styles.groupCount}>{spots.length} spots</Text>
-              </Pressable>
+    <View>
+      {groupsData.map(({ group, spots }) => {
+        const expanded = expandedGroups.has(group.id);
+        return (
+          <View key={group.id} style={styles.groupContainer}>
+            <Pressable
+              style={styles.groupHeader}
+              onPress={() => toggleGroup(group.id)}
+            >
+              <Text style={styles.groupArrow}>
+                {expanded ? '\u25BC' : '\u25B6'}
+              </Text>
+              <Text style={styles.groupName}>{group.name}</Text>
+              <Text style={styles.groupCount}>{spots.length} spots</Text>
+            </Pressable>
 
-              {expanded &&
-                spots.map((spot) => {
-                  const pref = getPreferenceForSpot(spot.id);
+            {expanded &&
+              spots.map((spot) => {
+                const pref = getPreferenceForSpot(spot.id);
 
-                  return (
-                    <Pressable
-                      key={spot.id}
-                      style={styles.spotRow}
-                      onPress={() => setEditingSpot(spot)}
-                    >
-                      <View style={styles.spotInfo}>
-                        <Text style={styles.spotName} numberOfLines={1}>
-                          {spot.name}
+                return (
+                  <Pressable
+                    key={spot.id}
+                    style={styles.spotRow}
+                    onPress={() => setEditingSpot(spot)}
+                  >
+                    <View style={styles.spotInfo}>
+                      <Text style={styles.spotName} numberOfLines={1}>
+                        {spot.name}
+                      </Text>
+                      {pref && (
+                        <Text style={styles.spotPrefHint}>
+                          {pref.tide_min_ft.toFixed(1)}-
+                          {pref.tide_max_ft.toFixed(1)} ft
                         </Text>
-                        {pref && (
-                          <Text style={styles.spotPrefHint}>
-                            {pref.tide_min_ft.toFixed(1)}-
-                            {pref.tide_max_ft.toFixed(1)} ft
-                          </Text>
-                        )}
-                      </View>
-                      <Switch
-                        value={pref?.enabled ?? false}
-                        onValueChange={() => handleToggleEnabled(spot)}
-                        trackColor={{ false: colors.border, true: colors.primary }}
-                        style={styles.toggle}
-                      />
-                    </Pressable>
-                  );
-                })}
-            </View>
-          );
-        })}
-      </ScrollView>
+                      )}
+                    </View>
+                    <Switch
+                      value={pref?.enabled ?? false}
+                      onValueChange={() => handleToggleEnabled(spot)}
+                      trackColor={{ false: colors.border, true: colors.primary }}
+                      style={styles.toggle}
+                    />
+                  </Pressable>
+                );
+              })}
+          </View>
+        );
+      })}
 
       {editingSpot && (
         <SpotPreferenceEditor
@@ -140,18 +137,9 @@ export default function SpotsScreen() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
   centered: {
-    flex: 1,
-    justifyContent: 'center',
+    paddingVertical: 40,
     alignItems: 'center',
-    backgroundColor: colors.bg,
-  },
-  listContent: {
-    paddingVertical: 8,
   },
   groupContainer: {
     marginBottom: 4,

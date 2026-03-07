@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -8,18 +8,21 @@ import {
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
 import { SessionCard } from '@/components/schedule/SessionCard';
+import { SessionResultEditor } from '@/components/schedule/SessionResultEditor';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useSpotStore } from '@/stores/useSpotStore';
 import { useScheduleForecasts } from '@/hooks/useScheduleForecasts';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
+import { SurfSession } from '@/types/session';
 
 export default function ScheduleScreen() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { sessions, loading, fetchSessions, removeSession, updateSession } =
+  const { sessions, loading, fetchSessions, removeSession, updateSession, completeSession } =
     useSessionStore();
   const fetchSpots = useSpotStore((s) => s.fetchSpots);
+  const [loggingSession, setLoggingSession] = useState<SurfSession | null>(null);
 
   useEffect(() => {
     fetchSpots();
@@ -97,6 +100,7 @@ export default function ScheduleScreen() {
                     session={s}
                     onDelete={() => handleDelete(s.id, s.spot_name)}
                     onUpdate={updateSession}
+                    onLogResults={() => setLoggingSession(s)}
                     isPast
                   />
                 ))}
@@ -105,6 +109,18 @@ export default function ScheduleScreen() {
           </>
         )}
       </ScrollView>
+
+      {loggingSession && (
+        <SessionResultEditor
+          visible={!!loggingSession}
+          session={loggingSession}
+          onSave={async (results) => {
+            await completeSession(loggingSession.id, results);
+            setLoggingSession(null);
+          }}
+          onClose={() => setLoggingSession(null)}
+        />
+      )}
     </View>
   );
 }

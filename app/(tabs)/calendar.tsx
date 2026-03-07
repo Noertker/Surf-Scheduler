@@ -147,7 +147,7 @@ export default function DashboardScreen() {
             <Text style={styles.emptyIcon}>{'\u301C'}</Text>
             <Text style={styles.emptyTitle}>NO PREFERENCES SET</Text>
             <Text style={styles.emptyHint}>
-              Go to the Spots tab, expand a region, and toggle spots on. Set your preferred tide range to see windows here.
+              Go to the Surfer tab, expand a region, and toggle spots on. Set your preferred tide range to see windows here.
             </Text>
           </View>
         ) : (

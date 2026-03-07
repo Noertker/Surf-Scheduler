@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { supabase } from '@/services/supabase';
-import { SurfSession } from '@/types/session';
+import { SurfSession, WaveType } from '@/types/session';
+
+type SessionUpdates = Partial<Pick<SurfSession,
+  'planned_start' | 'planned_end' | 'notes' |
+  'completed' | 'rating' | 'board_id' | 'wave_type' | 'result_notes' | 'gcal_event_id'
+>>;
 
 interface SessionState {
   sessions: SurfSession[];
@@ -8,8 +13,14 @@ interface SessionState {
   error: string | null;
   fetchSessions: () => Promise<void>;
   addSession: (session: Omit<SurfSession, 'id' | 'created_at'>) => Promise<void>;
-  updateSession: (id: string, updates: Partial<Pick<SurfSession, 'planned_start' | 'planned_end' | 'notes'>>) => Promise<void>;
+  updateSession: (id: string, updates: SessionUpdates) => Promise<void>;
   removeSession: (id: string) => Promise<void>;
+  completeSession: (id: string, results: {
+    rating: number;
+    board_id?: string;
+    wave_type?: WaveType;
+    result_notes?: string;
+  }) => Promise<void>;
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
@@ -90,6 +101,32 @@ export const useSessionStore = create<SessionState>((set) => ({
       if (error) throw error;
       set((state) => ({
         sessions: state.sessions.filter((s) => s.id !== id),
+      }));
+    } catch (err) {
+      set({ error: (err as Error).message });
+    }
+  },
+
+  completeSession: async (id, results) => {
+    try {
+      const updates: SessionUpdates = {
+        completed: true,
+        rating: results.rating,
+        board_id: results.board_id ?? null,
+        wave_type: results.wave_type ?? null,
+        result_notes: results.result_notes ?? null,
+      };
+      const { data, error } = await supabase
+        .from('surf_sessions')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      const updated = data as SurfSession;
+      set((state) => ({
+        sessions: state.sessions.map((s) => (s.id === id ? updated : s)),
       }));
     } catch (err) {
       set({ error: (err as Error).message });

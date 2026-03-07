@@ -42,22 +42,22 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="spots"
-        options={{
-          title: 'Spots',
-          headerTitleStyle: { color: colors.text, fontWeight: '700', letterSpacing: 1 },
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 22, color }}>🏄</Text>
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="schedule"
         options={{
           title: 'Schedule',
           headerTitleStyle: { color: colors.text, fontWeight: '700', letterSpacing: 1 },
           tabBarIcon: ({ color }) => (
             <Text style={{ fontSize: 22, color }}>📋</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="surfer"
+        options={{
+          title: 'Surfer',
+          headerTitleStyle: { color: colors.text, fontWeight: '700', letterSpacing: 1 },
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>🏄</Text>
           ),
         }}
       />

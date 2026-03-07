@@ -128,6 +128,7 @@ export function DayDetail({
       tide_start_ft: tideStart, tide_end_ft: tideEnd,
       avg_wind_mph: avgWind, avg_gusts_mph: avgGusts, avg_swell_ft: avgSwell,
       notes: null, gcal_event_id: null,
+      completed: false, rating: null, board_id: null, wave_type: null, result_notes: null,
     });
     setSchedulingIdx(null);
     Alert.alert('Scheduled!', `${w.spotName} added to your schedule.`);

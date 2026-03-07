@@ -1,3 +1,5 @@
+export type WaveType = 'punchy' | 'hollow' | 'mushy';
+
 export interface SurfSession {
   id: string;
   user_id: string | null;
@@ -12,5 +14,10 @@ export interface SurfSession {
   avg_swell_ft: number | null;
   notes: string | null;
   gcal_event_id: string | null;
+  completed: boolean;
+  rating: number | null;
+  board_id: string | null;
+  wave_type: WaveType | null;
+  result_notes: string | null;
   created_at: string;
 }
