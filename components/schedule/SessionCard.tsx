@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { StyleSheet, Pressable } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Pressable, StyleSheet } from 'react-native';
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
-import { SurfSession } from '@/types/session';
 import { LiveForecast, degToCompass } from '@/hooks/useScheduleForecasts';
+import { SurfSession } from '@/types/session';
+import { useColors } from '@/hooks/useColors';
+import { ThemeColors } from '@/constants/theme';
 
 interface Props {
   session: SurfSession;
@@ -14,6 +16,8 @@ interface Props {
 }
 
 export function SessionCard({ session, forecast, onDelete, onUpdate, isPast }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [editing, setEditing] = useState(false);
   const [editStart, setEditStart] = useState<Date | null>(null);
   const [editEnd, setEditEnd] = useState<Date | null>(null);
@@ -82,12 +86,9 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, isPast }: P
 
           {/* Center: live forecast conditions */}
           <View style={styles.cardConditions}>
-            {hasLive && (
-              <Text style={styles.liveLabel}>Live</Text>
-            )}
             {tide && (
               <Text style={styles.conditionLine}>
-                {tide.startFt.toFixed(1)}→{tide.endFt.toFixed(1)}ft
+                {tide.startFt.toFixed(1)}{'\u2192'}{tide.endFt.toFixed(1)}ft
               </Text>
             )}
             {wind && (
@@ -167,16 +168,17 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, isPast }: P
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
+    backgroundColor: colors.card,
   },
   cardPast: {
-    opacity: 0.5,
+    opacity: 0.35,
   },
   cardBody: {
     backgroundColor: 'transparent',
@@ -207,15 +209,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 2,
+    color: colors.text,
   },
   cardDate: {
     fontSize: 14,
     fontWeight: '600',
-    opacity: 0.7,
+    color: colors.textSecondary,
   },
   cardTime: {
     fontSize: 14,
-    opacity: 0.6,
+    color: colors.textTertiary,
     marginTop: 2,
   },
   editBtn: {
@@ -224,7 +227,7 @@ const styles = StyleSheet.create({
   editText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#2f95dc',
+    color: colors.primary,
   },
   deleteBtn: {
     padding: 4,
@@ -232,15 +235,15 @@ const styles = StyleSheet.create({
   deleteText: {
     fontSize: 16,
     fontWeight: '600',
-    opacity: 0.4,
+    color: colors.textDim,
   },
   editForm: {
     marginTop: 10,
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#2f95dc',
-    backgroundColor: 'rgba(47, 149, 220, 0.06)',
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryDark,
   },
   timeRow: {
     flexDirection: 'row',
@@ -253,11 +256,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     width: 40,
+    color: colors.textSecondary,
   },
   timeAdjust: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#2f95dc',
+    color: colors.primary,
     paddingHorizontal: 6,
     paddingVertical: 4,
   },
@@ -266,6 +270,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     minWidth: 80,
     textAlign: 'center',
+    color: colors.text,
   },
   editActions: {
     flexDirection: 'row',
@@ -280,12 +285,12 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 14,
-    opacity: 0.6,
+    color: colors.textTertiary,
   },
   saveBtn: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#2f95dc',
+    backgroundColor: colors.primary,
     borderRadius: 8,
   },
   saveText: {
@@ -296,25 +301,25 @@ const styles = StyleSheet.create({
   liveLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#2ecc71',
+    color: colors.accent,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   conditionLine: {
     fontSize: 13,
-    opacity: 0.7,
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   secondarySwell: {
     fontSize: 12,
-    opacity: 0.55,
+    color: colors.textDim,
     marginBottom: 2,
     paddingLeft: 8,
   },
   combinedSwell: {
     fontSize: 12,
-    opacity: 0.5,
+    color: colors.textFaint,
     marginTop: 2,
   },
 });

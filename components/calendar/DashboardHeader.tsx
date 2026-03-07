@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '@/components/shared/Text';
 import { TimeWindowEditor } from '@/components/calendar/TimeWindowEditor';
+import { ThemeColors } from '@/constants/theme';
+import { useColors } from '@/hooks/useColors';
+import { useThemeStore } from '@/hooks/useThemeStore';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 
 export function DashboardHeader() {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const { groups, activeGroupId, setActiveGroup } = useGroupStore();
   const { dayStartHour, dayEndHour } = useSettingsStore();
+  const { mode, toggleTheme } = useThemeStore();
   const [showTimeSettings, setShowTimeSettings] = useState(false);
 
   const fmtHour = (h: number) =>
@@ -33,8 +40,11 @@ export function DashboardHeader() {
       </View>
       <Pressable onPress={() => setShowTimeSettings(true)} style={styles.timeBadge}>
         <Text style={styles.timeText}>
-          {'\u23F0'} {fmtHour(dayStartHour)}-{fmtHour(dayEndHour)}
+          {fmtHour(dayStartHour)}-{fmtHour(dayEndHour)}
         </Text>
+      </Pressable>
+      <Pressable onPress={toggleTheme} hitSlop={8} style={styles.themeBadge}>
+        <Text style={styles.themeIcon}>{mode === 'dark' ? '\u2600' : '\u263E'}</Text>
       </Pressable>
       <TimeWindowEditor
         visible={showTimeSettings}
@@ -44,7 +54,7 @@ export function DashboardHeader() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -57,18 +67,20 @@ const styles = StyleSheet.create({
   pill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: '#f5f5f5',
+    borderColor: colors.border,
+    backgroundColor: colors.cardAlt,
   },
   activePill: {
-    backgroundColor: '#2f95dc',
-    borderColor: '#2f95dc',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   label: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '600',
+    color: colors.textTertiary,
+    letterSpacing: 0.5,
   },
   activeLabel: {
     color: '#fff',
@@ -78,7 +90,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   timeText: {
-    fontSize: 12,
-    opacity: 0.6,
+    fontSize: 10,
+    color: colors.textDim,
+    letterSpacing: 0.5,
+  },
+  themeBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  themeIcon: {
+    fontSize: 16,
+    color: colors.textDim,
   },
 });

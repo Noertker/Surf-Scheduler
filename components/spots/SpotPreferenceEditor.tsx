@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, StyleSheet, Pressable, Switch } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
 import { Spot } from '@/types/spot';
 import { usePreferenceStore } from '@/stores/usePreferenceStore';
+import { useColors } from '@/hooks/useColors';
+import { ThemeColors } from '@/constants/theme';
 
 interface Props {
   visible: boolean;
@@ -13,6 +15,8 @@ interface Props {
 }
 
 export function SpotPreferenceEditor({ visible, spot, onClose }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { getPreferenceForSpot, savePreference } = usePreferenceStore();
   const existing = getPreferenceForSpot(spot.id);
 
@@ -58,8 +62,8 @@ export function SpotPreferenceEditor({ visible, spot, onClose }: Props) {
               step={0.5}
               value={tideMin}
               onValueChange={setTideMin}
-              minimumTrackTintColor="#2f95dc"
-              maximumTrackTintColor="#ddd"
+              minimumTrackTintColor={colors.primary}
+              maximumTrackTintColor={colors.borderLight}
             />
             <Text style={styles.sliderValue}>{tideMin.toFixed(1)}</Text>
           </View>
@@ -73,15 +77,15 @@ export function SpotPreferenceEditor({ visible, spot, onClose }: Props) {
               step={0.5}
               value={tideMax}
               onValueChange={setTideMax}
-              minimumTrackTintColor="#2f95dc"
-              maximumTrackTintColor="#ddd"
+              minimumTrackTintColor={colors.primary}
+              maximumTrackTintColor={colors.borderLight}
             />
             <Text style={styles.sliderValue}>{tideMax.toFixed(1)}</Text>
           </View>
 
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Show on Dashboard</Text>
-            <Switch value={enabled} onValueChange={setEnabled} />
+            <Switch value={enabled} onValueChange={setEnabled} trackColor={{ false: colors.border, true: colors.primary }} />
           </View>
 
           <Pressable style={styles.saveButton} onPress={handleSave}>
@@ -93,17 +97,18 @@ export function SpotPreferenceEditor({ visible, spot, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlayDark,
   },
   sheet: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
     paddingBottom: 40,
+    backgroundColor: colors.card,
   },
   header: {
     flexDirection: 'row',
@@ -114,18 +119,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
+    color: colors.text,
   },
   closeButton: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    opacity: 0.5,
+    color: colors.textTertiary,
     padding: 4,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    opacity: 0.6,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textDim,
     textTransform: 'uppercase',
+    letterSpacing: 1.5,
     marginBottom: 12,
   },
   sliderRow: {
@@ -137,6 +144,7 @@ const styles = StyleSheet.create({
     width: 36,
     fontSize: 14,
     fontWeight: '600',
+    color: colors.textSecondary,
   },
   slider: {
     flex: 1,
@@ -147,6 +155,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontSize: 14,
     fontWeight: '700',
+    color: colors.text,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -157,9 +166,10 @@ const styles = StyleSheet.create({
   },
   toggleLabel: {
     fontSize: 16,
+    color: colors.textSecondary,
   },
   saveButton: {
-    backgroundColor: '#2f95dc',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

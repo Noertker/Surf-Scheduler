@@ -7,6 +7,8 @@ import { TidePrediction } from '@/types/tide';
 import { DEFAULT_DAY_START, DEFAULT_DAY_END } from '@/utils/tideWindows';
 import { View } from '@/components/shared/View';
 import { useChartTouch } from '@/hooks/useChartTouch';
+import { useColors } from '@/hooks/useColors';
+import { ThemeColors } from '@/constants/theme';
 
 interface HighlightWindow {
   start: Date;
@@ -36,6 +38,7 @@ export function TideChart({
   dayEndHour = DEFAULT_DAY_END,
   height = 200,
 }: Props) {
+  const colors = useColors();
   const chartWidth = Dimensions.get('window').width - 32;
 
   const { pathD, xScale, yScale, ticks, filtered } = useMemo(() => {
@@ -131,7 +134,7 @@ export function TideChart({
               Math.max(xScale(highlightWindow.start), PADDING.left)
             )}
             height={Math.max(0, yScale(highlightWindow.tideMin) - yScale(highlightWindow.tideMax))}
-            fill="rgba(46, 204, 113, 0.25)"
+            fill={colors.highlightFill}
           />
         ) : tideMin != null && tideMax != null ? (
           <Rect
@@ -139,7 +142,7 @@ export function TideChart({
             y={yScale(tideMax)}
             width={chartWidth - PADDING.left - PADDING.right}
             height={Math.max(0, yScale(tideMin) - yScale(tideMax))}
-            fill="rgba(46, 204, 113, 0.15)"
+            fill={colors.tidePrefFill}
           />
         ) : null}
 
@@ -150,7 +153,7 @@ export function TideChart({
             x={PADDING.left - 4}
             y={yScale(tick) + 4}
             fontSize={10}
-            fill="#999"
+            fill={colors.chartAxis}
             textAnchor="end">
             {tick.toFixed(1)}
           </SvgText>
@@ -163,7 +166,7 @@ export function TideChart({
             x={xScale(tick)}
             y={height - 4}
             fontSize={10}
-            fill="#999"
+            fill={colors.chartAxis}
             textAnchor="middle">
             {tick.toLocaleTimeString([], { hour: 'numeric' })}
           </SvgText>
@@ -177,13 +180,13 @@ export function TideChart({
             y1={PADDING.top}
             x2={xScale(tick)}
             y2={height - PADDING.bottom}
-            stroke="#eee"
+            stroke={colors.chartGrid}
             strokeWidth={1}
           />
         ))}
 
         {/* Tide curve */}
-        <Path d={pathD} fill="none" stroke="#2f95dc" strokeWidth={2.5} />
+        <Path d={pathD} fill="none" stroke={colors.chartTide} strokeWidth={2.5} />
 
         {/* Touch crosshair */}
         {touchX != null && activeReading && activeIdx != null && (
@@ -193,7 +196,7 @@ export function TideChart({
               y1={PADDING.top}
               x2={xScale(activeReading.timestamp)}
               y2={height - PADDING.bottom}
-              stroke="rgba(0,0,0,0.3)"
+              stroke={colors.crosshairStroke}
               strokeWidth={1}
               strokeDasharray="4,3"
             />
@@ -201,7 +204,7 @@ export function TideChart({
               cx={xScale(activeReading.timestamp)}
               cy={yScale(activeReading.heightFt)}
               r={4}
-              fill="#2f95dc"
+              fill={colors.chartTide}
             />
             {/* Label background */}
             <Rect
@@ -210,13 +213,13 @@ export function TideChart({
               width={112}
               height={18}
               rx={4}
-              fill="rgba(0,0,0,0.75)"
+              fill={colors.chartLabelBg}
             />
             <SvgText
               x={clampLabelX(xScale(activeReading.timestamp), PADDING.left + 56, chartWidth - PADDING.right - 56)}
               y={13}
               fontSize={11}
-              fill="#fff"
+              fill={colors.crosshairLabelText}
               textAnchor="middle"
               fontWeight="600">
               {activeReading.heightFt.toFixed(1)}ft @ {activeReading.timestamp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}

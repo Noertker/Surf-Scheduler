@@ -7,6 +7,8 @@ import { SwellReading } from '@/types/conditions';
 import { DEFAULT_DAY_START, DEFAULT_DAY_END } from '@/utils/tideWindows';
 import { View } from '@/components/shared/View';
 import { useChartTouch } from '@/hooks/useChartTouch';
+import { useColors } from '@/hooks/useColors';
+import { ThemeColors } from '@/constants/theme';
 
 interface Props {
   swell: SwellReading[];
@@ -28,6 +30,7 @@ export function SwellChart({
   dayEndHour = DEFAULT_DAY_END,
   height = 160,
 }: Props) {
+  const colors = useColors();
   const chartWidth = Dimensions.get('window').width - 32;
 
   const { heightPath, heightArea, xScale, yScale, ticks, filtered } = useMemo(() => {
@@ -112,7 +115,7 @@ export function SwellChart({
             x={PADDING.left - 4}
             y={yScale(tick) + 4}
             fontSize={10}
-            fill="#999"
+            fill={colors.chartAxis}
             textAnchor="end">
             {tick}
           </SvgText>
@@ -125,7 +128,7 @@ export function SwellChart({
             x={xScale(tick)}
             y={height - 4}
             fontSize={10}
-            fill="#999"
+            fill={colors.chartAxis}
             textAnchor="middle">
             {tick.toLocaleTimeString([], { hour: 'numeric' })}
           </SvgText>
@@ -139,16 +142,16 @@ export function SwellChart({
             y1={PADDING.top}
             x2={xScale(tick)}
             y2={height - PADDING.bottom}
-            stroke="#eee"
+            stroke={colors.chartGrid}
             strokeWidth={1}
           />
         ))}
 
         {/* Swell height area fill */}
-        <Path d={heightArea} fill="rgba(52, 152, 219, 0.15)" />
+        <Path d={heightArea} fill="rgba(6, 182, 212, 0.15)" />
 
         {/* Swell height line */}
-        <Path d={heightPath} fill="none" stroke="#3498db" strokeWidth={2} />
+        <Path d={heightPath} fill="none" stroke={colors.chartSwell} strokeWidth={2} />
 
         {/* Touch crosshair */}
         {touchX != null && activeReading && (
@@ -158,7 +161,7 @@ export function SwellChart({
               y1={PADDING.top}
               x2={dataXPositions[activeIndex!]}
               y2={height - PADDING.bottom}
-              stroke="rgba(0,0,0,0.3)"
+              stroke={colors.crosshairStroke}
               strokeWidth={1}
               strokeDasharray="4,3"
             />
@@ -166,7 +169,7 @@ export function SwellChart({
               cx={dataXPositions[activeIndex!]}
               cy={yScale(activeReading.heightFt)}
               r={4}
-              fill="#3498db"
+              fill={colors.chartSwell}
             />
             {/* Label background */}
             <Rect
@@ -175,13 +178,13 @@ export function SwellChart({
               width={140}
               height={18}
               rx={4}
-              fill="rgba(0,0,0,0.75)"
+              fill={colors.chartLabelBg}
             />
             <SvgText
               x={clampLabelX(dataXPositions[activeIndex!], PADDING.left + 70, chartWidth - PADDING.right - 70)}
               y={13}
               fontSize={11}
-              fill="#fff"
+              fill={colors.crosshairLabelText}
               textAnchor="middle"
               fontWeight="600">
               {activeReading.heightFt}ft @ {Math.round(activeReading.periodS)}s {degToCompass(activeReading.directionDeg)}

@@ -5,6 +5,8 @@ import { View } from '@/components/shared/View';
 import { TideChart } from '@/components/charts/TideChart';
 import { WindChart } from '@/components/charts/WindChart';
 import { SwellChart } from '@/components/charts/SwellChart';
+import { ThemeColors } from '@/constants/theme';
+import { useColors } from '@/hooks/useColors';
 import { TidePrediction, TideWindow } from '@/types/tide';
 import { WindReading, SwellReading } from '@/types/conditions';
 import { formatTimeCompact, localDateKey } from '@/utils/tideWindows';
@@ -28,21 +30,13 @@ interface Props {
 }
 
 export function DayDetail({
-  visible,
-  date,
-  predictions,
-  hiLo,
-  windows,
-  wind,
-  swell,
-  tideMin,
-  tideMax,
-  dayStartHour,
-  dayEndHour,
-  onClose,
-  onPrevDay,
-  onNextDay,
+  visible, date, predictions, hiLo, windows, wind, swell,
+  tideMin, tideMax, dayStartHour, dayEndHour,
+  onClose, onPrevDay, onNextDay,
 }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [selectedIdx, setSelectedIdx] = useState<number | null>(0);
   const [schedulingIdx, setSchedulingIdx] = useState<number | null>(null);
   const [customStart, setCustomStart] = useState<Date | null>(null);
@@ -50,7 +44,6 @@ export function DayDetail({
 
   const { addSession } = useSessionStore();
 
-  // Reset state when navigating between days
   useEffect(() => {
     setSelectedIdx(0);
     setSchedulingIdx(null);
@@ -62,7 +55,6 @@ export function DayDetail({
     day: 'numeric',
   });
 
-  // Filter wind/swell to this day
   const dayKey = localDateKey(date);
   const dayWind = useMemo(
     () => wind.filter((r) => localDateKey(r.timestamp) === dayKey),
@@ -73,7 +65,6 @@ export function DayDetail({
     [swell, dayKey]
   );
 
-  // Sort windows by start time
   const sortedWindows = useMemo(
     () => [...windows].sort((a, b) => a.start.getTime() - b.start.getTime()),
     [windows]
@@ -99,11 +90,9 @@ export function DayDetail({
   const handleConfirmSchedule = async () => {
     if (schedulingIdx == null || !customStart || !customEnd) return;
     const w = sortedWindows[schedulingIdx];
-
     const startMs = customStart.getTime();
     const endMs = customEnd.getTime();
 
-    // Compute tide height at the custom start/end from predictions
     const closestHeight = (target: number) => {
       let best = predictions[0];
       let bestDiff = Math.abs(best.timestamp.getTime() - target);
@@ -116,7 +105,6 @@ export function DayDetail({
     const tideStart = predictions.length > 0 ? closestHeight(startMs) : w.startHeight;
     const tideEnd = predictions.length > 0 ? closestHeight(endMs) : w.endHeight;
 
-    // Re-average wind/swell for the custom time range
     const windInRange = dayWind.filter(
       (r) => r.timestamp.getTime() >= startMs && r.timestamp.getTime() <= endMs
     );
@@ -135,32 +123,21 @@ export function DayDetail({
       : w.avgSwellFt ?? null;
 
     await addSession({
-      user_id: null,
-      spot_id: w.spotId,
-      spot_name: w.spotName,
-      planned_start: customStart.toISOString(),
-      planned_end: customEnd.toISOString(),
-      tide_start_ft: tideStart,
-      tide_end_ft: tideEnd,
-      avg_wind_mph: avgWind,
-      avg_gusts_mph: avgGusts,
-      avg_swell_ft: avgSwell,
-      notes: null,
-      gcal_event_id: null,
+      user_id: null, spot_id: w.spotId, spot_name: w.spotName,
+      planned_start: customStart.toISOString(), planned_end: customEnd.toISOString(),
+      tide_start_ft: tideStart, tide_end_ft: tideEnd,
+      avg_wind_mph: avgWind, avg_gusts_mph: avgGusts, avg_swell_ft: avgSwell,
+      notes: null, gcal_event_id: null,
     });
     setSchedulingIdx(null);
     Alert.alert('Scheduled!', `${w.spotName} added to your schedule.`);
   };
 
-  // Build highlight for the tide chart based on selected window
-  // Uses the selected spot's own tide preferences for the Y range
   const highlightWindow = useMemo(() => {
     if (!selectedWindow) return undefined;
     return {
-      start: selectedWindow.start,
-      end: selectedWindow.end,
-      tideMin: selectedWindow.tideMinPref,
-      tideMax: selectedWindow.tideMaxPref,
+      start: selectedWindow.start, end: selectedWindow.end,
+      tideMin: selectedWindow.tideMinPref, tideMax: selectedWindow.tideMaxPref,
     };
   }, [selectedWindow]);
 
@@ -183,15 +160,14 @@ export function DayDetail({
               ) : <View style={styles.navArrow} />}
             </View>
             <Pressable onPress={onClose} hitSlop={12}>
-              <Text style={styles.closeButton}>X</Text>
+              <Text style={styles.closeButton}>✕</Text>
             </Pressable>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Window Cards */}
             {sortedWindows.length > 0 ? (
               <View style={styles.cardsSection}>
-                <Text style={styles.sectionTitle}>Good Tide Windows</Text>
+                <Text style={styles.sectionTitle}>TIDE WINDOWS</Text>
                 {sortedWindows.map((w, i) => {
                   const selected = selectedIdx === i;
                   const scheduling = schedulingIdx === i;
@@ -199,8 +175,7 @@ export function DayDetail({
                     <View key={i}>
                       <Pressable
                         style={[styles.card, selected && styles.cardSelected]}
-                        onPress={() => setSelectedIdx(selected ? null : i)}
-                      >
+                        onPress={() => setSelectedIdx(selected ? null : i)}>
                         <View style={styles.cardHeader}>
                           <Text style={styles.cardSpot}>{w.spotName}</Text>
                           <View style={styles.cardHeaderRight}>
@@ -210,26 +185,25 @@ export function DayDetail({
                             <Pressable
                               onPress={() => handleSchedulePress(i)}
                               hitSlop={8}
-                              style={styles.scheduleButton}
-                            >
+                              style={styles.scheduleButton}>
                               <Text style={styles.scheduleButtonText}>+</Text>
                             </Pressable>
                           </View>
                         </View>
                         <View style={styles.cardDetails}>
                           <Text style={styles.cardTide}>
-                            {w.startHeight.toFixed(1)}-{w.endHeight.toFixed(1)} ft tide
+                            {w.startHeight.toFixed(1)}-{w.endHeight.toFixed(1)} ft
                           </Text>
                           {w.avgSwellFt != null && (
                             <Text style={styles.cardConditions}>
-                              {w.avgSwellFt}ft swell{'  '}{w.avgWindMph}mph g{w.avgGustsMph}
+                              {w.avgSwellFt}ft swell  {w.avgWindMph}mph g{w.avgGustsMph}
                             </Text>
                           )}
                         </View>
                       </Pressable>
                       {scheduling && customStart && customEnd && (
                         <View style={styles.scheduleForm}>
-                          <Text style={styles.scheduleFormTitle}>Schedule Session</Text>
+                          <Text style={styles.scheduleFormTitle}>SCHEDULE SESSION</Text>
                           <View style={styles.timeRow}>
                             <Text style={styles.timeLabel}>Start:</Text>
                             <Pressable onPress={() => adjustTime('start', -15)} hitSlop={4}>
@@ -259,7 +233,7 @@ export function DayDetail({
                               <Text style={styles.cancelText}>Cancel</Text>
                             </Pressable>
                             <Pressable onPress={handleConfirmSchedule} style={styles.confirmBtn}>
-                              <Text style={styles.confirmText}>Add to Schedule</Text>
+                              <Text style={styles.confirmText}>+ SCHEDULE</Text>
                             </Pressable>
                           </View>
                         </View>
@@ -274,7 +248,6 @@ export function DayDetail({
               </Text>
             )}
 
-            {/* Tide Chart */}
             {predictions.length > 0 && (
               <TideChart
                 predictions={predictions}
@@ -286,49 +259,35 @@ export function DayDetail({
               />
             )}
 
-            {/* Hi/Lo Summary */}
             {hiLo.length > 0 && (
               <View style={styles.hiLoRow}>
                 {hiLo.map((p, i) => (
                   <View key={i} style={styles.hiLoItem}>
                     <Text style={styles.hiLoType}>
-                      {p.type === 'H' ? 'High' : 'Low'}
+                      {p.type === 'H' ? 'HIGH' : 'LOW'}
                     </Text>
                     <Text style={styles.hiLoValue}>
                       {p.heightFt.toFixed(1)} ft
                     </Text>
                     <Text style={styles.hiLoTime}>
-                      {p.timestamp.toLocaleTimeString([], {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })}
+                      {p.timestamp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                     </Text>
                   </View>
                 ))}
               </View>
             )}
 
-            {/* Wind Chart */}
             {dayWind.length > 0 && (
-              <View style={styles.windSection}>
-                <Text style={styles.sectionTitle}>Wind (mph)</Text>
-                <WindChart
-                  wind={dayWind}
-                  dayStartHour={dayStartHour}
-                  dayEndHour={dayEndHour}
-                />
+              <View style={styles.chartSection}>
+                <Text style={styles.sectionTitle}>WIND (MPH)</Text>
+                <WindChart wind={dayWind} dayStartHour={dayStartHour} dayEndHour={dayEndHour} />
               </View>
             )}
 
-            {/* Swell Chart */}
             {daySwell.length > 0 && (
-              <View style={styles.windSection}>
-                <Text style={styles.sectionTitle}>Swell (ft)</Text>
-                <SwellChart
-                  swell={daySwell}
-                  dayStartHour={dayStartHour}
-                  dayEndHour={dayEndHour}
-                />
+              <View style={styles.chartSection}>
+                <Text style={styles.sectionTitle}>SWELL (FT)</Text>
+                <SwellChart swell={daySwell} dayStartHour={dayStartHour} dayEndHour={dayEndHour} />
               </View>
             )}
           </ScrollView>
@@ -338,222 +297,89 @@ export function DayDetail({
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlayDark },
   sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    paddingBottom: 40,
-    maxHeight: '85%',
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 24, paddingBottom: 40, maxHeight: '85%',
+    backgroundColor: colors.card,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: 16,
   },
   navRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+    flexDirection: 'row', alignItems: 'center', flex: 1,
     backgroundColor: 'transparent',
   },
-  navArrow: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  navArrowText: {
-    fontSize: 28,
-    fontWeight: '600',
-    opacity: 0.5,
-    lineHeight: 32,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-    flex: 1,
-  },
-  closeButton: {
-    fontSize: 18,
-    fontWeight: '600',
-    opacity: 0.5,
-    padding: 4,
-  },
-  cardsSection: {
-    marginBottom: 16,
-  },
+  navArrow: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
+  navArrowText: { fontSize: 28, fontWeight: '600', color: colors.primary, lineHeight: 32 },
+  title: { fontSize: 16, fontWeight: '700', textAlign: 'center', flex: 1, color: colors.text },
+  closeButton: { fontSize: 16, fontWeight: '600', color: colors.textTertiary, padding: 4 },
+  cardsSection: { marginBottom: 16 },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 8,
+    fontSize: 11, fontWeight: '700', color: colors.textDim,
+    letterSpacing: 1.5, marginBottom: 10,
   },
   card: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-    backgroundColor: 'transparent',
+    borderWidth: 1, borderColor: colors.border, borderRadius: 10,
+    padding: 12, marginBottom: 8, backgroundColor: colors.cardAlt,
   },
-  cardSelected: {
-    borderColor: '#2ecc71',
-    backgroundColor: 'rgba(46, 204, 113, 0.08)',
-  },
+  cardSelected: { borderColor: colors.primary, backgroundColor: colors.primaryDark },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', backgroundColor: 'transparent',
   },
   cardHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'transparent',
+    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'transparent',
   },
   scheduleButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#2ecc71',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
   },
-  scheduleButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  cardSpot: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  cardTime: {
-    fontSize: 14,
-    fontWeight: '600',
-    opacity: 0.7,
-  },
+  scheduleButtonText: { color: '#fff', fontSize: 18, fontWeight: '700', lineHeight: 20 },
+  cardSpot: { fontSize: 14, fontWeight: '700', color: colors.textMuted },
+  cardTime: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   cardDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-    backgroundColor: 'transparent',
+    flexDirection: 'row', justifyContent: 'space-between',
+    marginTop: 4, backgroundColor: 'transparent',
   },
-  cardTide: {
-    fontSize: 13,
-    opacity: 0.6,
-  },
-  cardConditions: {
-    fontSize: 13,
-    opacity: 0.5,
-  },
-  hiLoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 16,
-    paddingVertical: 12,
-  },
-  hiLoItem: {
-    alignItems: 'center',
-  },
+  cardTide: { fontSize: 12, color: colors.textTertiary },
+  cardConditions: { fontSize: 12, color: colors.textDim },
+  hiLoRow: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 16, paddingVertical: 12 },
+  hiLoItem: { alignItems: 'center' },
   hiLoType: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    opacity: 0.6,
+    fontSize: 10, fontWeight: '700', textTransform: 'uppercase',
+    color: colors.textDim, letterSpacing: 1,
   },
-  hiLoValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  hiLoTime: {
-    fontSize: 12,
-    opacity: 0.6,
-    marginTop: 2,
-  },
-  noWindows: {
-    textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 16,
-    fontSize: 14,
-    opacity: 0.5,
-  },
-  windSection: {
-    marginTop: 20,
-  },
+  hiLoValue: { fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 2 },
+  hiLoTime: { fontSize: 11, color: colors.textTertiary, marginTop: 2 },
+  noWindows: { textAlign: 'center', marginTop: 16, marginBottom: 16, fontSize: 13, color: colors.textDim },
+  chartSection: { marginTop: 20 },
   scheduleForm: {
-    marginTop: -4,
-    marginBottom: 8,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#2ecc71',
-    backgroundColor: 'rgba(46, 204, 113, 0.06)',
+    marginTop: -4, marginBottom: 8, padding: 12, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primaryDark,
   },
   scheduleFormTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 8,
+    fontSize: 11, fontWeight: '700', color: colors.textSecondary,
+    letterSpacing: 1, marginBottom: 8,
   },
   timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
-    backgroundColor: 'transparent',
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginBottom: 6, backgroundColor: 'transparent',
   },
-  timeLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    width: 40,
-  },
+  timeLabel: { fontSize: 13, fontWeight: '600', width: 40, color: colors.textSecondary },
   timeAdjust: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2f95dc',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    fontSize: 13, fontWeight: '600', color: colors.primary,
+    paddingHorizontal: 6, paddingVertical: 4,
   },
-  timeValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    minWidth: 80,
-    textAlign: 'center',
-  },
+  timeValue: { fontSize: 14, fontWeight: '700', minWidth: 80, textAlign: 'center', color: colors.text },
   scheduleActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-    marginTop: 8,
-    backgroundColor: 'transparent',
+    flexDirection: 'row', justifyContent: 'flex-end', gap: 12,
+    marginTop: 8, backgroundColor: 'transparent',
   },
-  cancelBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  cancelText: {
-    fontSize: 14,
-    opacity: 0.6,
-  },
-  confirmBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#2ecc71',
-    borderRadius: 8,
-  },
-  confirmText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  cancelBtn: { paddingHorizontal: 16, paddingVertical: 8 },
+  cancelText: { fontSize: 13, color: colors.textTertiary },
+  confirmBtn: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.primary, borderRadius: 6 },
+  confirmText: { color: '#fff', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
 });

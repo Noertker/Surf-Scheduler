@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -13,6 +13,8 @@ import { usePreferenceStore } from '@/stores/usePreferenceStore';
 import { fetchAllGroupsWithSpots } from '@/services/spotGroups';
 import { SpotGroup } from '@/types/group';
 import { Spot } from '@/types/spot';
+import { useColors } from '@/hooks/useColors';
+import { ThemeColors } from '@/constants/theme';
 
 interface GroupWithSpots {
   group: SpotGroup;
@@ -20,6 +22,8 @@ interface GroupWithSpots {
 }
 
 export default function SpotsScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [groupsData, setGroupsData] = useState<GroupWithSpots[]>([]);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [editingSpot, setEditingSpot] = useState<Spot | null>(null);
@@ -113,6 +117,7 @@ export default function SpotsScreen() {
                       <Switch
                         value={pref?.enabled ?? false}
                         onValueChange={() => handleToggleEnabled(spot)}
+                        trackColor={{ false: colors.border, true: colors.primary }}
                         style={styles.toggle}
                       />
                     </Pressable>
@@ -134,14 +139,16 @@ export default function SpotsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.bg,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.bg,
   },
   listContent: {
     paddingVertical: 8,
@@ -158,16 +165,17 @@ const styles = StyleSheet.create({
   groupArrow: {
     fontSize: 12,
     marginRight: 8,
-    opacity: 0.5,
+    color: colors.textDim,
   },
   groupName: {
     fontSize: 16,
     fontWeight: '700',
     flex: 1,
+    color: colors.text,
   },
   groupCount: {
     fontSize: 13,
-    opacity: 0.4,
+    color: colors.textFaint,
   },
   spotRow: {
     flexDirection: 'row',
@@ -176,7 +184,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingLeft: 36,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.border,
   },
   spotInfo: {
     flex: 1,
@@ -185,10 +193,11 @@ const styles = StyleSheet.create({
   spotName: {
     fontSize: 15,
     fontWeight: '500',
+    color: colors.textMuted,
   },
   spotPrefHint: {
     fontSize: 12,
-    opacity: 0.5,
+    color: colors.textDim,
     marginTop: 1,
   },
   toggle: {

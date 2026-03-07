@@ -7,6 +7,8 @@ import { WindReading } from '@/types/conditions';
 import { DEFAULT_DAY_START, DEFAULT_DAY_END } from '@/utils/tideWindows';
 import { View } from '@/components/shared/View';
 import { useChartTouch } from '@/hooks/useChartTouch';
+import { useColors } from '@/hooks/useColors';
+import { ThemeColors } from '@/constants/theme';
 
 interface Props {
   wind: WindReading[];
@@ -28,6 +30,7 @@ export function WindChart({
   dayEndHour = DEFAULT_DAY_END,
   height = 140,
 }: Props) {
+  const colors = useColors();
   const chartWidth = Dimensions.get('window').width - 32;
 
   const { speedPath, gustArea, xScale, yScale, ticks, filtered } = useMemo(() => {
@@ -115,7 +118,7 @@ export function WindChart({
             x={PADDING.left - 4}
             y={yScale(tick) + 4}
             fontSize={10}
-            fill="#999"
+            fill={colors.chartAxis}
             textAnchor="end">
             {tick}
           </SvgText>
@@ -128,7 +131,7 @@ export function WindChart({
             x={xScale(tick)}
             y={height - 4}
             fontSize={10}
-            fill="#999"
+            fill={colors.chartAxis}
             textAnchor="middle">
             {tick.toLocaleTimeString([], { hour: 'numeric' })}
           </SvgText>
@@ -142,16 +145,16 @@ export function WindChart({
             y1={PADDING.top}
             x2={xScale(tick)}
             y2={height - PADDING.bottom}
-            stroke="#eee"
+            stroke={colors.chartGrid}
             strokeWidth={1}
           />
         ))}
 
         {/* Gust area (shaded between speed and gusts) */}
-        <Path d={gustArea} fill="rgba(231, 76, 60, 0.15)" />
+        <Path d={gustArea} fill="rgba(248, 113, 113, 0.15)" />
 
         {/* Wind speed line */}
-        <Path d={speedPath} fill="none" stroke="#e74c3c" strokeWidth={2} />
+        <Path d={speedPath} fill="none" stroke={colors.chartWind} strokeWidth={2} />
 
         {/* Touch crosshair */}
         {touchX != null && activeReading && (
@@ -161,7 +164,7 @@ export function WindChart({
               y1={PADDING.top}
               x2={dataXPositions[activeIndex!]}
               y2={height - PADDING.bottom}
-              stroke="rgba(0,0,0,0.3)"
+              stroke={colors.crosshairStroke}
               strokeWidth={1}
               strokeDasharray="4,3"
             />
@@ -169,13 +172,13 @@ export function WindChart({
               cx={dataXPositions[activeIndex!]}
               cy={yScale(activeReading.speedMph)}
               r={4}
-              fill="#e74c3c"
+              fill={colors.chartWind}
             />
             <Circle
               cx={dataXPositions[activeIndex!]}
               cy={yScale(activeReading.gustsMph)}
               r={3}
-              fill="rgba(231, 76, 60, 0.5)"
+              fill="rgba(248, 113, 113, 0.5)"
             />
             {/* Label background */}
             <Rect
@@ -184,13 +187,13 @@ export function WindChart({
               width={124}
               height={18}
               rx={4}
-              fill="rgba(0,0,0,0.75)"
+              fill={colors.chartLabelBg}
             />
             <SvgText
               x={clampLabelX(dataXPositions[activeIndex!], PADDING.left + 62, chartWidth - PADDING.right - 62)}
               y={13}
               fontSize={11}
-              fill="#fff"
+              fill={colors.crosshairLabelText}
               textAnchor="middle"
               fontWeight="600">
               {Math.round(activeReading.speedMph)}mph {degToCompass(activeReading.directionDeg)} g{Math.round(activeReading.gustsMph)}

@@ -1,8 +1,10 @@
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
+import { ThemeColors } from '@/constants/theme';
+import { useColors } from '@/hooks/useColors';
 import { TideWindow } from '@/types/tide';
 import { formatTimeCompact, localDateKey } from '@/utils/tideWindows';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Dimensions, Pressable, StyleSheet } from 'react-native';
 
 interface Props {
@@ -32,14 +34,14 @@ function isPast(d: Date): boolean {
 }
 
 export function CalendarGrid({ year, month, dayWindows, onDayPress }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
-  const startDow = firstDay.getDay(); // 0=Sun
+  const startDow = firstDay.getDay();
   const daysInMonth = lastDay.getDate();
 
-  const monthName = firstDay.toLocaleString('default', { month: 'long' });
-
-  // Build grid cells: leading blanks + day cells
   const cells: (Date | null)[] = [];
   for (let i = 0; i < startDow; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) {
@@ -48,15 +50,11 @@ export function CalendarGrid({ year, month, dayWindows, onDayPress }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.monthTitle}>
-        {monthName} {year}
-      </Text>
-
       {/* Day-of-week headers */}
       <View style={styles.headerRow}>
         {DAYS_OF_WEEK.map((d) => (
           <View key={d} style={styles.headerCell}>
-            <Text style={styles.headerText}>{d}</Text>
+            <Text style={styles.headerText}>{d.toUpperCase()}</Text>
           </View>
         ))}
       </View>
@@ -74,7 +72,6 @@ export function CalendarGrid({ year, month, dayWindows, onDayPress }: Props) {
           const today = isToday(date);
           const past = isPast(date);
 
-          // Group windows by spot name
           const bySpot = new Map<string, TideWindow[]>();
           for (const w of windows) {
             const arr = bySpot.get(w.spotName) ?? [];
@@ -95,12 +92,7 @@ export function CalendarGrid({ year, month, dayWindows, onDayPress }: Props) {
                 past && styles.cellPast,
               ]}
               onPress={() => onDayPress(date)}>
-              <Text
-                style={[
-                  styles.dayNumber,
-                  today && styles.dayNumberToday,
-                  past && styles.dayNumberPast,
-                ]}>
+              <Text style={[styles.dayNumber, today && styles.dayNumberToday]}>
                 {date.getDate()}
               </Text>
               {shownSpots.map(([spotName, spotWindows]) => (
@@ -115,7 +107,7 @@ export function CalendarGrid({ year, month, dayWindows, onDayPress }: Props) {
                       </Text>
                       {w.avgSwellFt != null && (
                         <Text style={styles.conditionsText} numberOfLines={1}>
-                          {w.avgSwellFt}ft {w.avgWindMph}mph g{w.avgGustsMph}
+                          {w.avgSwellFt}ft {w.avgWindMph}mph
                         </Text>
                       )}
                     </React.Fragment>
@@ -133,15 +125,9 @@ export function CalendarGrid({ year, month, dayWindows, onDayPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-  },
-  monthTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 12,
   },
   headerRow: {
     flexDirection: 'row',
@@ -150,11 +136,13 @@ const styles = StyleSheet.create({
   headerCell: {
     width: CELL_WIDTH,
     alignItems: 'center',
+    paddingVertical: 6,
   },
   headerText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600',
-    opacity: 0.5,
+    color: colors.textDim,
+    letterSpacing: 1,
   },
   grid: {
     flexDirection: 'row',
@@ -164,54 +152,55 @@ const styles = StyleSheet.create({
     width: CELL_WIDTH,
     minHeight: CELL_WIDTH * 1.1,
     paddingVertical: 4,
-    paddingHorizontal: 2,
+    paddingHorizontal: 3,
     borderWidth: 0.5,
-    borderColor: '#eee',
+    borderColor: colors.border,
+    backgroundColor: colors.cardAlt,
   },
   cellWithWindows: {
-    backgroundColor: 'rgba(46, 204, 113, 0.08)',
+    backgroundColor: colors.card,
+    borderColor: colors.borderLight,
   },
   cellToday: {
     borderWidth: 2,
-    borderColor: '#2f95dc',
+    borderColor: colors.primary,
+    backgroundColor: colors.todayTint,
   },
   cellPast: {
-    opacity: 0.5,
+    opacity: 0.35,
   },
   dayNumber: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
     marginBottom: 2,
   },
   dayNumberToday: {
-    color: '#2f95dc',
-  },
-  dayNumberPast: {
-    opacity: 0.6,
+    color: colors.primary,
   },
   windowEntry: {
     marginTop: 1,
     backgroundColor: 'transparent',
   },
   windowSpot: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    opacity: 0.8,
+    color: colors.textSecondary,
     lineHeight: 14,
   },
   windowTime: {
-    fontSize: 12,
-    opacity: 0.6,
+    fontSize: 11,
+    color: colors.textTertiary,
     lineHeight: 14,
   },
   conditionsText: {
     fontSize: 9,
-    opacity: 0.5,
+    color: colors.textDim,
     lineHeight: 11,
   },
   moreText: {
     fontSize: 9,
-    opacity: 0.5,
-    fontStyle: 'italic',
+    color: colors.textDim,
+    marginTop: 2,
   },
 });

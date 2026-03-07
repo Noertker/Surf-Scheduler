@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Modal, StyleSheet, Pressable } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
 import { useSettingsStore } from '@/stores/useSettingsStore';
+import { ThemeColors } from '@/constants/theme';
+import { useColors } from '@/hooks/useColors';
 
 interface Props {
   visible: boolean;
@@ -17,6 +19,9 @@ function formatHour(h: number): string {
 }
 
 export function TimeWindowEditor({ visible, onClose }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const { dayStartHour, dayEndHour, saveTimeWindow } = useSettingsStore();
 
   const [start, setStart] = useState(dayStartHour);
@@ -51,8 +56,8 @@ export function TimeWindowEditor({ visible, onClose }: Props) {
               step={1}
               value={start}
               onValueChange={setStart}
-              minimumTrackTintColor="#2f95dc"
-              maximumTrackTintColor="#ddd"
+              minimumTrackTintColor={colors.primary}
+              maximumTrackTintColor={colors.borderLight}
             />
             <Text style={styles.sliderValue}>{formatHour(start)}</Text>
           </View>
@@ -66,8 +71,8 @@ export function TimeWindowEditor({ visible, onClose }: Props) {
               step={1}
               value={end}
               onValueChange={setEnd}
-              minimumTrackTintColor="#2f95dc"
-              maximumTrackTintColor="#ddd"
+              minimumTrackTintColor={colors.primary}
+              maximumTrackTintColor={colors.borderLight}
             />
             <Text style={styles.sliderValue}>{formatHour(end)}</Text>
           </View>
@@ -81,17 +86,18 @@ export function TimeWindowEditor({ visible, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colors.overlayDark,
   },
   sheet: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
     paddingBottom: 40,
+    backgroundColor: colors.card,
   },
   header: {
     flexDirection: 'row',
@@ -102,16 +108,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
+    color: colors.text,
   },
   closeButton: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    opacity: 0.5,
+    color: colors.textTertiary,
     padding: 4,
   },
   hint: {
     fontSize: 14,
-    opacity: 0.6,
+    color: colors.textDim,
     marginBottom: 20,
   },
   sliderRow: {
@@ -123,6 +130,7 @@ const styles = StyleSheet.create({
     width: 40,
     fontSize: 14,
     fontWeight: '600',
+    color: colors.textSecondary,
   },
   slider: {
     flex: 1,
@@ -133,9 +141,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontSize: 14,
     fontWeight: '700',
+    color: colors.text,
   },
   saveButton: {
-    backgroundColor: '#2f95dc',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

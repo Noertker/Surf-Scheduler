@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -11,8 +11,12 @@ import { SessionCard } from '@/components/schedule/SessionCard';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useSpotStore } from '@/stores/useSpotStore';
 import { useScheduleForecasts } from '@/hooks/useScheduleForecasts';
+import { useColors } from '@/hooks/useColors';
+import { ThemeColors } from '@/constants/theme';
 
 export default function ScheduleScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { sessions, loading, fetchSessions, removeSession, updateSession } =
     useSessionStore();
   const fetchSpots = useSpotStore((s) => s.fetchSpots);
@@ -105,14 +109,16 @@ export default function ScheduleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.bg,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.bg,
   },
   scrollContent: {
     padding: 16,
@@ -122,16 +128,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
     paddingTop: 60,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    paddingBottom: 40,
+    marginTop: 20,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 12,
+    color: colors.text,
   },
   emptyHint: {
     fontSize: 14,
     textAlign: 'center',
-    opacity: 0.6,
+    color: colors.textDim,
     lineHeight: 20,
   },
   section: {
@@ -144,7 +157,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 11,
     fontWeight: '700',
+    color: colors.textDim,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
   },
 });
