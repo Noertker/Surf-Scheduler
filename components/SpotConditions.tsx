@@ -13,6 +13,8 @@ interface Props {
   loading: boolean;
   tideMin?: number;
   tideMax?: number;
+  dayStartHour?: number;
+  dayEndHour?: number;
 }
 
 function degToCompass(deg: number): string {
@@ -28,7 +30,7 @@ function findClosest<T extends { timestamp: Date }>(readings: T[]): T | undefine
   );
 }
 
-export function SpotConditions({ predictions, hiLo, swell, wind, loading, tideMin, tideMax }: Props) {
+export function SpotConditions({ predictions, hiLo, swell, wind, loading, tideMin, tideMax, dayStartHour, dayEndHour }: Props) {
   if (loading) {
     return <ActivityIndicator style={{ marginTop: 40 }} size="large" />;
   }
@@ -55,7 +57,7 @@ export function SpotConditions({ predictions, hiLo, swell, wind, loading, tideMi
       {todayPredictions.length > 0 && (
         <>
           <Text style={styles.sectionTitle}>Today's Tides</Text>
-          <TideChart predictions={todayPredictions} tideMin={tideMin} tideMax={tideMax} />
+          <TideChart predictions={todayPredictions} tideMin={tideMin} tideMax={tideMax} dayStartHour={dayStartHour} dayEndHour={dayEndHour} />
         </>
       )}
 

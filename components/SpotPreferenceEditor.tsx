@@ -142,9 +142,9 @@ const styles = StyleSheet.create({
     height: 40,
   },
   sliderValue: {
-    width: 40,
+    width: 52,
     textAlign: 'right',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
   },
   toggleRow: {

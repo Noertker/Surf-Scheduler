@@ -13,6 +13,8 @@ interface Props {
   windows: TideWindow[];
   tideMin?: number;
   tideMax?: number;
+  dayStartHour?: number;
+  dayEndHour?: number;
   onClose: () => void;
 }
 
@@ -24,6 +26,8 @@ export function DayDetail({
   windows,
   tideMin,
   tideMax,
+  dayStartHour,
+  dayEndHour,
   onClose,
 }: Props) {
   const dateStr = date.toLocaleDateString('default', {
@@ -58,6 +62,8 @@ export function DayDetail({
                 predictions={predictions}
                 tideMin={tideMin}
                 tideMax={tideMax}
+                dayStartHour={dayStartHour}
+                dayEndHour={dayEndHour}
               />
             )}
 
@@ -93,7 +99,7 @@ export function DayDetail({
                     {spotWindows.map((w, i) => (
                       <Text key={i} style={styles.windowTime}>
                         {formatTimeCompact(w.start)} - {formatTimeCompact(w.end)}
-                        {'  '}({w.minHeight.toFixed(1)}-{w.maxHeight.toFixed(1)} ft)
+                        {'  '}({w.startHeight.toFixed(1)}-{w.endHeight.toFixed(1)} ft)
                       </Text>
                     ))}
                   </View>

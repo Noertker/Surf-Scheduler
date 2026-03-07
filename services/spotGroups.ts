@@ -26,3 +26,31 @@ export async function fetchGroupSpots(groupId: string): Promise<Spot[]> {
     .filter(Boolean)
     .sort((a: Spot, b: Spot) => a.name.localeCompare(b.name));
 }
+
+/**
+ * Fetches all groups with their spots in a single query.
+ * Used by the Spots tab to display grouped accordion list.
+ */
+export async function fetchAllGroupsWithSpots(): Promise<
+  { group: SpotGroup; spots: Spot[] }[]
+> {
+  const { data, error } = await supabase
+    .from('spot_groups')
+    .select(
+      `
+      id, name, display_order,
+      spot_group_members ( spots(*) )
+    `
+    )
+    .order('display_order');
+
+  if (error) throw error;
+
+  return (data ?? []).map((g: any) => ({
+    group: { id: g.id, name: g.name, display_order: g.display_order },
+    spots: (g.spot_group_members ?? [])
+      .map((m: any) => m.spots)
+      .filter(Boolean)
+      .sort((a: Spot, b: Spot) => a.name.localeCompare(b.name)),
+  }));
+}

@@ -16,3 +16,10 @@ export interface SpotPreference {
   tide_max_ft: number;
   enabled: boolean;
 }
+
+export interface UserSettings {
+  id: string;
+  user_id: string | null;
+  day_start_hour: number;
+  day_end_hour: number;
+}

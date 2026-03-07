@@ -4,18 +4,28 @@ import Svg, { Path, Rect, Line, Text as SvgText } from 'react-native-svg';
 import { line, curveNatural } from 'd3-shape';
 import { scaleLinear, scaleTime } from 'd3-scale';
 import { TidePrediction } from '@/types/tide';
+import { DEFAULT_DAY_START, DEFAULT_DAY_END } from '@/utils/tideWindows';
 import { View } from '@/components/Themed';
 
 interface Props {
   predictions: TidePrediction[];
   tideMin?: number;
   tideMax?: number;
+  dayStartHour?: number;
+  dayEndHour?: number;
   height?: number;
 }
 
 const PADDING = { top: 16, right: 16, bottom: 24, left: 36 };
 
-export function TideChart({ predictions, tideMin, tideMax, height = 200 }: Props) {
+export function TideChart({
+  predictions,
+  tideMin,
+  tideMax,
+  dayStartHour = DEFAULT_DAY_START,
+  dayEndHour = DEFAULT_DAY_END,
+  height = 200,
+}: Props) {
   const chartWidth = Dimensions.get('window').width - 32;
 
   const { pathD, xScale, yScale, ticks } = useMemo(() => {
@@ -23,12 +33,11 @@ export function TideChart({ predictions, tideMin, tideMax, height = 200 }: Props
       return { pathD: '', xScale: null, yScale: null, ticks: [] };
     }
 
-    // Fixed 5am–9pm window
     const refDate = predictions[0].timestamp;
     const dayStart = new Date(refDate);
-    dayStart.setHours(5, 0, 0, 0);
+    dayStart.setHours(dayStartHour, 0, 0, 0);
     const dayEnd = new Date(refDate);
-    dayEnd.setHours(21, 0, 0, 0);
+    dayEnd.setHours(dayEndHour, 0, 0, 0);
 
     const filtered = predictions.filter(
       (p) => p.timestamp >= dayStart && p.timestamp <= dayEnd
@@ -55,9 +64,10 @@ export function TideChart({ predictions, tideMin, tideMax, height = 200 }: Props
       .y((d) => yS(d.heightFt))
       .curve(curveNatural);
 
-    // Ticks every 3 hours from 6am to 9pm
+    // Ticks every 3 hours within the visible range
     const timeTicks: Date[] = [];
-    for (let h = 6; h <= 21; h += 3) {
+    const firstTick = Math.ceil(dayStartHour / 3) * 3;
+    for (let h = firstTick; h <= dayEndHour; h += 3) {
       const tick = new Date(refDate);
       tick.setHours(h, 0, 0, 0);
       timeTicks.push(tick);
@@ -69,7 +79,7 @@ export function TideChart({ predictions, tideMin, tideMax, height = 200 }: Props
       yScale: yS,
       ticks: timeTicks,
     };
-  }, [predictions, chartWidth, height]);
+  }, [predictions, chartWidth, height, dayStartHour, dayEndHour]);
 
   if (!pathD || !xScale || !yScale) {
     return null;

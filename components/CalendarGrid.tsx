@@ -1,8 +1,8 @@
-import React from 'react';
-import { StyleSheet, Pressable, Dimensions } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { TideWindow } from '@/types/tide';
-import { formatTimeCompact } from '@/utils/tideWindows';
+import { formatTimeCompact, localDateKey } from '@/utils/tideWindows';
+import React from 'react';
+import { Dimensions, Pressable, StyleSheet } from 'react-native';
 
 interface Props {
   year: number;
@@ -14,10 +14,6 @@ interface Props {
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const CELL_WIDTH = (Dimensions.get('window').width - 32) / 7;
 const MAX_WINDOWS_SHOWN = 2;
-
-function dateKey(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
 
 function isToday(d: Date): boolean {
   const now = new Date();
@@ -71,22 +67,22 @@ export function CalendarGrid({ year, month, dayWindows, onDayPress }: Props) {
             return <View key={`blank-${i}`} style={styles.cell} />;
           }
 
-          const key = dateKey(date);
+          const key = localDateKey(date);
           const windows = dayWindows.get(key) ?? [];
           const hasWindows = windows.length > 0;
           const today = isToday(date);
           const past = isPast(date);
 
-          // Deduplicate by spot, show first window per spot
-          const bySpot = new Map<string, TideWindow>();
+          // Group windows by spot name
+          const bySpot = new Map<string, TideWindow[]>();
           for (const w of windows) {
-            if (!bySpot.has(w.spotId)) bySpot.set(w.spotId, w);
+            const arr = bySpot.get(w.spotName) ?? [];
+            arr.push(w);
+            bySpot.set(w.spotName, arr);
           }
-          const summaries = Array.from(bySpot.values()).slice(
-            0,
-            MAX_WINDOWS_SHOWN
-          );
-          const moreCount = bySpot.size - MAX_WINDOWS_SHOWN;
+          const spotEntries = Array.from(bySpot.entries());
+          const shownSpots = spotEntries.slice(0, MAX_WINDOWS_SHOWN);
+          const moreCount = spotEntries.length - MAX_WINDOWS_SHOWN;
 
           return (
             <Pressable
@@ -106,10 +102,17 @@ export function CalendarGrid({ year, month, dayWindows, onDayPress }: Props) {
                 ]}>
                 {date.getDate()}
               </Text>
-              {summaries.map((w) => (
-                <Text key={w.spotId} style={styles.windowText} numberOfLines={1}>
-                  {formatTimeCompact(w.start)}-{formatTimeCompact(w.end)}
-                </Text>
+              {shownSpots.map(([spotName, spotWindows]) => (
+                <View key={spotName} style={styles.windowEntry}>
+                  <Text style={styles.windowSpot} numberOfLines={1}>
+                    {spotName}
+                  </Text>
+                  {spotWindows.map((w, wi) => (
+                    <Text key={wi} style={styles.windowTime} numberOfLines={1}>
+                      {formatTimeCompact(w.start)}-{formatTimeCompact(w.end)}
+                    </Text>
+                  ))}
+                </View>
               ))}
               {moreCount > 0 && (
                 <Text style={styles.moreText}>+{moreCount}</Text>
@@ -178,10 +181,20 @@ const styles = StyleSheet.create({
   dayNumberPast: {
     opacity: 0.6,
   },
-  windowText: {
-    fontSize: 9,
-    opacity: 0.7,
-    lineHeight: 12,
+  windowEntry: {
+    marginTop: 1,
+    backgroundColor: 'transparent',
+  },
+  windowSpot: {
+    fontSize: 12,
+    fontWeight: '600',
+    opacity: 0.8,
+    lineHeight: 14,
+  },
+  windowTime: {
+    fontSize: 12,
+    opacity: 0.6,
+    lineHeight: 14,
   },
   moreText: {
     fontSize: 9,

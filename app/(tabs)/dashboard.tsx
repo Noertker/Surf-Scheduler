@@ -1,26 +1,29 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
 import { Text, View } from '@/components/Themed';
-import { GroupSelector } from '@/components/GroupSelector';
 import { CalendarGrid } from '@/components/CalendarGrid';
 import { DayDetail } from '@/components/DayDetail';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { usePreferenceStore } from '@/stores/usePreferenceStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useTideStore } from '@/stores/useTideStore';
-import { TideWindow, TidePrediction } from '@/types/tide';
+import { TideWindow } from '@/types/tide';
 import {
   calculateTideWindows,
   groupPredictionsByDay,
+  localDateKey,
 } from '@/utils/tideWindows';
 
 export default function DashboardScreen() {
   const { groups, activeGroupId, groupSpots, loading, fetchGroups, setActiveGroup } =
     useGroupStore();
   const { preferences, fetchPreferences } = usePreferenceStore();
+  const { dayStartHour, dayEndHour, fetchSettings } = useSettingsStore();
   const {
     monthlyPredictions,
     monthlyHiLo,
     monthlyLoading,
+    error: tideError,
     fetchMonthlyTides,
   } = useTideStore();
 
@@ -30,10 +33,15 @@ export default function DashboardScreen() {
   const year = now.getFullYear();
   const month = now.getMonth();
 
+  // Next month for 30-day forecast that spans two months
+  const nextMonth = month === 11 ? 0 : month + 1;
+  const nextYear = month === 11 ? year + 1 : year;
+
   // Load groups and preferences on mount
   useEffect(() => {
     fetchGroups();
     fetchPreferences();
+    fetchSettings();
   }, []);
 
   // When active group changes, fetch monthly tides for its station
@@ -62,11 +70,13 @@ export default function DashboardScreen() {
         pref.tide_min_ft,
         pref.tide_max_ft,
         spot.id,
-        spot.name
+        spot.name,
+        dayStartHour,
+        dayEndHour
       );
 
       for (const w of windows) {
-        const key = w.start.toISOString().slice(0, 10);
+        const key = localDateKey(w.start);
         const arr = map.get(key) ?? [];
         arr.push(w);
         map.set(key, arr);
@@ -74,13 +84,13 @@ export default function DashboardScreen() {
     }
 
     return map;
-  }, [monthlyPredictions, groupSpots, preferences]);
+  }, [monthlyPredictions, groupSpots, preferences, dayStartHour, dayEndHour]);
 
   // Get predictions and windows for the selected day
   const selectedDayData = useMemo(() => {
     if (!selectedDate) return { predictions: [], hiLo: [], windows: [] };
 
-    const key = selectedDate.toISOString().slice(0, 10);
+    const key = localDateKey(selectedDate);
     const dayMap = groupPredictionsByDay(monthlyPredictions);
     const hiLoMap = groupPredictionsByDay(monthlyHiLo);
 
@@ -116,30 +126,46 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.container}>
-      <GroupSelector
-        groups={groups}
-        activeGroupId={activeGroupId}
-        onSelect={setActiveGroup}
-      />
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {tideError && (
+          <Pressable
+            style={styles.errorBanner}
+            onPress={() => {
+              const stationId = groupSpots[0]?.noaa_station_id;
+              if (stationId) fetchMonthlyTides(stationId);
+            }}
+          >
+            <Text style={styles.errorText}>
+              Failed to load tides: {tideError} — Tap to retry
+            </Text>
+          </Pressable>
+        )}
         {monthlyLoading ? (
           <ActivityIndicator style={{ marginTop: 40 }} size="large" />
         ) : spotsWithPrefs.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>No Preferences Set</Text>
             <Text style={styles.emptyHint}>
-              Long-press a spot on the Spots tab to set your preferred tide
-              range. Spots with preferences will show their tide windows here.
+              Go to the Spots tab, expand a region, and toggle spots on. Use
+              the gear icon to set your preferred tide range. Enabled spots
+              will show their tide windows here.
             </Text>
           </View>
         ) : (
-          <CalendarGrid
-            year={year}
-            month={month}
-            dayWindows={dayWindows}
-            onDayPress={setSelectedDate}
-          />
+          <>
+            <CalendarGrid
+              year={year}
+              month={month}
+              dayWindows={dayWindows}
+              onDayPress={setSelectedDate}
+            />
+            <CalendarGrid
+              year={nextYear}
+              month={nextMonth}
+              dayWindows={dayWindows}
+              onDayPress={setSelectedDate}
+            />
+          </>
         )}
       </ScrollView>
 
@@ -152,6 +178,8 @@ export default function DashboardScreen() {
           windows={selectedDayData.windows}
           tideMin={representativePref?.tide_min_ft}
           tideMax={representativePref?.tide_max_ft}
+          dayStartHour={dayStartHour}
+          dayEndHour={dayEndHour}
           onClose={() => setSelectedDate(null)}
         />
       )}
@@ -186,5 +214,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.6,
     lineHeight: 20,
+  },
+  errorBanner: {
+    backgroundColor: 'rgba(220, 50, 50, 0.1)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#c0392b',
+    textAlign: 'center',
   },
 });

@@ -9,6 +9,6 @@ export interface TideWindow {
   end: Date;
   spotId: string;
   spotName: string;
-  minHeight: number;
-  maxHeight: number;
+  startHeight: number;
+  endHeight: number;
 }
