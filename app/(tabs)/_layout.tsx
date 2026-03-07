@@ -1,10 +1,10 @@
-import React from 'react';
 import { Tabs } from 'expo-router';
+import React from 'react';
 import { Text } from 'react-native';
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
 import { DashboardHeader } from '@/components/DashboardHeader';
+import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -16,11 +16,11 @@ export default function TabLayout() {
         headerShown: true,
       }}>
       <Tabs.Screen
-        name="dashboard"
+        name="calendar"
         options={{
           headerTitle: () => <DashboardHeader />,
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 22, color }}>📊</Text>
+            <Text style={{ fontSize: 22, color }}> 📅 </Text>
           ),
         }}
       />
@@ -30,6 +30,15 @@ export default function TabLayout() {
           title: 'Spots',
           tabBarIcon: ({ color }) => (
             <Text style={{ fontSize: 22, color }}>🏄</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="schedule"
+        options={{
+          title: 'Schedule',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>📋</Text>
           ),
         }}
       />

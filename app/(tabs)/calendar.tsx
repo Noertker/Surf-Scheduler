@@ -1,21 +1,21 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { ScrollView, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
-import { Text, View } from '@/components/Themed';
 import { CalendarGrid } from '@/components/CalendarGrid';
 import { DayDetail } from '@/components/DayDetail';
+import { Text, View } from '@/components/Themed';
+import { fetchSwellData, fetchWindData } from '@/services/openMeteo';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { usePreferenceStore } from '@/stores/usePreferenceStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useTideStore } from '@/stores/useTideStore';
-import { TideWindow } from '@/types/tide';
 import { SwellReading, WindReading } from '@/types/conditions';
-import { fetchSwellData, fetchWindData } from '@/services/openMeteo';
+import { TideWindow } from '@/types/tide';
 import {
   calculateTideWindows,
   enrichWindowsWithConditions,
   groupPredictionsByDay,
   localDateKey,
 } from '@/utils/tideWindows';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet } from 'react-native';
 
 export default function DashboardScreen() {
   const { groups, activeGroupId, groupSpots, loading, fetchGroups, setActiveGroup } =
