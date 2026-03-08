@@ -9,66 +9,21 @@
 - Google OAuth + anonymous-to-authenticated migration
 - Dark/light theme, responsive layout (mobile + web)
 
----
-
-## Phase 1 — Data Model Foundation
-
-Everything downstream depends on these schema changes.
-
-### 1a. Expand Session model
-- Add `status` enum: `upcoming` | `completed` (replaces `completed` boolean)
-- Add `conditions_snapshot` JSONB — frozen at feedback submission time (not at scheduling) so the snapshot reflects the most accurate forecast closest to the actual session
-- Expand rating from 1–5 to 1–10
-- Add `feedback` JSONB: `{ waveCountEstimate, boardFeelRating, focusGoalsWorked[], whatClicked, whatDidnt }`
-
-### 1b. Surfer Profile table
-- New `surfer_profiles` table: `user_id` (PK FK), `level` (enum: beginner→expert), `years_experience`, `stance` (regular/goofy), `goals` (text[]), `strengths` (text[]), `weaknesses` (text[]), `session_focus` (free text)
-- RLS: user sees only their own
-- New Zustand store: `useProfileStore`
+## What's Done (Phase 1–3)
+- **Auth gate + onboarding**: 3-page swipeable onboarding with marketing copy, email/password + Google sign-in, entire app behind auth
+- **RLS tightened**: reads allow own + anonymous rows, writes require authenticated user_id
+- **Schema expansion**: `conditions_snapshot` JSONB, `feedback` JSONB, rating 1–10, `surfer_profiles` table with enums
+- **Surfer Profile UI**: ProfileEditor modal (level, stance, experience, goals/strengths/weaknesses multi-select, session focus), ProfileSection display in Surfer tab
+- **Expanded Session Feedback form**: 1–10 rating chips, wave count, board picker + board feel, focus goals multi-select, what clicked/didn't, conditions snapshot frozen at feedback time
+- **Surfer tab as default route**, Account section cleaned up (sign-out only)
+- **Feedback auto-prompt**: auto-opens feedback modal on Sessions tab when un-logged past sessions detected, dismissible per visit, resets on app foreground
+- **Historical pattern matching**: upcoming session cards show "Similar Past Sessions" panel matching on swell height (±1ft), tide phase (rising/falling), and wind character (offshore/onshore/cross relative to spot's swell window)
 
 ---
 
-## Phase 2 — Surfer Profile UI + Session Feedback
+## Phase 4 — AI Coach (next)
 
-These are independent and can be built in parallel.
-
-### 2a. Surfer Profile screen
-- New section in the Surfer tab (replace "Coaching" placeholder)
-- Form: level picker, years experience, stance toggle, goals multi-select (paddle power, pop-up speed, bottom turns, cutbacks, tube riding, reading lineups, wave selection, etc.), strengths/weaknesses multi-select, free-text session focus
-- Persists to `surfer_profiles` via `useProfileStore`
-
-### 2b. Session Feedback flow
-- When a session's `planned_end` has passed and status is `upcoming`, prompt for feedback
-- Feedback form (modal or inline on SessionCard):
-  - Overall rating 1–10 slider
-  - Wave count estimate (numeric input)
-  - Board picker (from quiver)
-  - Board feel rating 1–10
-  - Focus goals worked (multi-select from profile goals)
-  - Free-text: "what clicked" / "what didn't"
-- On submit: freeze current conditions into `conditions_snapshot`, write feedback JSON, set status to `completed`
-- Frozen conditions display alongside feedback as permanent record
-
----
-
-## Phase 3 — Historical Pattern Matching
-
-*Depends on: Phase 1 (conditions snapshots) + Phase 2b (feedback data)*
-
-- When viewing an upcoming session, query past completed sessions at the same spot where:
-  - Swell height within ±1ft
-  - Same tide phase (rising/falling/high/low — derived from snapshot)
-  - Similar wind character (offshore vs onshore vs cross)
-- Display as "Similar Past Sessions" panel on session detail:
-  - Date, rating, board used, key feedback note, conditions summary
-- Client-side filtering via Supabase query — no AI needed
-- Empty state: "No similar sessions yet — keep logging!"
-
----
-
-## Phase 4 — AI Coach
-
-*Depends on: Profile (2a), Feedback (2b), Pattern Matching (3)*
+*Depends on: Profile (2a), Feedback (2b), Pattern Matching (3) — all complete*
 
 ### Infrastructure
 - Anthropic API integration (`services/anthropicCoach.ts`)

@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AppState,
+  AppStateStatus,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
@@ -24,6 +26,40 @@ export default function SessionsScreen() {
     useSessionStore();
   const fetchSpots = useSpotStore((s) => s.fetchSpots);
   const [loggingSession, setLoggingSession] = useState<SurfSession | null>(null);
+  const dismissedRef = useRef(false);
+
+  // Find the most recent past session that hasn't been logged
+  const getUnloggedSession = useCallback((): SurfSession | null => {
+    const now = new Date();
+    const unlogged = sessions
+      .filter((s) => new Date(s.planned_start) < now && !s.completed)
+      .sort(
+        (a, b) =>
+          new Date(b.planned_start).getTime() -
+          new Date(a.planned_start).getTime()
+      );
+    return unlogged[0] ?? null;
+  }, [sessions]);
+
+  // Auto-prompt feedback when sessions finish loading
+  useEffect(() => {
+    if (loading || dismissedRef.current || loggingSession) return;
+    const session = getUnloggedSession();
+    if (session) setLoggingSession(session);
+  }, [loading, sessions]);
+
+  // Re-prompt when app returns to foreground (resets dismiss flag)
+  useEffect(() => {
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        dismissedRef.current = false;
+        const session = getUnloggedSession();
+        if (session) setLoggingSession(session);
+      }
+    };
+    const sub = AppState.addEventListener('change', handleAppState);
+    return () => sub.remove();
+  }, [getUnloggedSession]);
 
   // Spots are not user-scoped — safe to fetch on mount.
   // Sessions are fetched by AuthRefreshBridge after auth is ready.
@@ -127,7 +163,10 @@ export default function SessionsScreen() {
             await completeSession(loggingSession.id, results);
             setLoggingSession(null);
           }}
-          onClose={() => setLoggingSession(null)}
+          onClose={() => {
+            dismissedRef.current = true;
+            setLoggingSession(null);
+          }}
         />
       )}
     </View>

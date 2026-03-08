@@ -4,7 +4,7 @@ import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
 import { SurfSession, WaveType, ConditionsSnapshot, SessionFeedback } from '@/types/session';
 import { SURF_SKILL_OPTIONS } from '@/types/profile';
-import { LiveForecast } from '@/hooks/useSessionForecasts';
+import { LiveForecast, degToCompass } from '@/hooks/useSessionForecasts';
 import { useSurfboardStore } from '@/stores/useSurfboardStore';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
@@ -109,7 +109,50 @@ export function SessionResultEditor({ visible, session, forecast, onSave, onClos
             </Pressable>
           </View>
 
-          <Text style={styles.subtitle}>{session.spot_name}</Text>
+          {/* Session info header */}
+          <View style={styles.sessionInfo}>
+            <Text style={styles.infoSpot}>{session.spot_name}</Text>
+            <Text style={styles.infoTime}>
+              {new Date(session.planned_start).toLocaleDateString('default', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+              })}
+              {'  '}
+              {new Date(session.planned_start).toLocaleTimeString([], {
+                hour: 'numeric',
+                minute: '2-digit',
+              })}
+              {' - '}
+              {new Date(session.planned_end).toLocaleTimeString([], {
+                hour: 'numeric',
+                minute: '2-digit',
+              })}
+            </Text>
+            <View style={styles.infoConditions}>
+              {(forecast?.tide ?? session.tide_start_ft != null) && (
+                <Text style={styles.infoStat}>
+                  {forecast
+                    ? `${forecast.tide?.startFt}→${forecast.tide?.endFt}ft`
+                    : `${session.tide_start_ft}→${session.tide_end_ft}ft`}
+                </Text>
+              )}
+              {(forecast?.wind ?? session.avg_wind_mph != null) && (
+                <Text style={styles.infoStat}>
+                  {forecast?.wind
+                    ? `${forecast.wind.avgMph}mph ${degToCompass(forecast.wind.directionDeg)} g${forecast.wind.avgGustsMph}`
+                    : `${session.avg_wind_mph}mph`}
+                </Text>
+              )}
+              {(forecast?.swell ?? session.avg_swell_ft != null) && (
+                <Text style={styles.infoStat}>
+                  {forecast?.swell
+                    ? `${forecast.swell.primaryHeightFt}ft@${forecast.swell.primaryPeriodS}s ${degToCompass(forecast.swell.primaryDirectionDeg)}`
+                    : `${session.avg_swell_ft}ft swell`}
+                </Text>
+              )}
+            </View>
+          </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Rating 1-10 */}
@@ -156,23 +199,25 @@ export function SessionResultEditor({ visible, session, forecast, onSave, onClos
             />
 
             {/* Board Used */}
-            {boards.length > 0 && (
-              <>
-                <Text style={styles.fieldLabel}>BOARD USED</Text>
-                <View style={styles.optionRow}>
-                  {boards.map((b) => (
-                    <Pressable
-                      key={b.id}
-                      style={[styles.option, b.id === boardId && styles.optionActive]}
-                      onPress={() => setBoardId(b.id === boardId ? undefined : b.id)}
-                    >
-                      <Text style={[styles.optionText, b.id === boardId && styles.optionTextActive]}>
-                        {b.name}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </>
+            <Text style={styles.fieldLabel}>BOARD USED</Text>
+            {boards.length > 0 ? (
+              <View style={styles.optionRow}>
+                {boards.map((b) => (
+                  <Pressable
+                    key={b.id}
+                    style={[styles.option, b.id === boardId && styles.optionActive]}
+                    onPress={() => setBoardId(b.id === boardId ? undefined : b.id)}
+                  >
+                    <Text style={[styles.optionText, b.id === boardId && styles.optionTextActive]}>
+                      {b.name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.hintText}>
+                Add boards in Surfer → Quiver to track board performance
+              </Text>
             )}
 
             {/* Board Feel */}
@@ -291,10 +336,35 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.textTertiary,
     padding: 4,
   },
-  subtitle: {
-    fontSize: 14,
+  sessionInfo: {
+    backgroundColor: colors.cardAlt,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  infoSpot: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  infoTime: {
+    fontSize: 13,
     color: colors.textSecondary,
-    marginBottom: 20,
+    marginBottom: 8,
+  },
+  infoConditions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    backgroundColor: 'transparent',
+  },
+  infoStat: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textTertiary,
   },
   fieldLabel: {
     fontSize: 11,
@@ -355,6 +425,12 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 15,
     color: colors.text,
     backgroundColor: colors.cardAlt,
+    marginBottom: 20,
+  },
+  hintText: {
+    fontSize: 12,
+    color: colors.textDim,
+    fontStyle: 'italic',
     marginBottom: 20,
   },
   notesInput: {

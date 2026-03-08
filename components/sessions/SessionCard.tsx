@@ -5,6 +5,8 @@ import { View } from '@/components/shared/View';
 import { CalendarSyncButton } from '@/components/sessions/CalendarSyncButton';
 import { SessionTimeEditor } from '@/components/sessions/SessionTimeEditor';
 import { LiveForecast, degToCompass } from '@/hooks/useSessionForecasts';
+import { useSimilarSessions } from '@/hooks/useSimilarSessions';
+import { SimilarSessionsPanel } from '@/components/sessions/SimilarSessionsPanel';
 import { SurfSession } from '@/types/session';
 import { TidePrediction } from '@/types/tide';
 import { useSpotStore } from '@/stores/useSpotStore';
@@ -26,6 +28,7 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResult
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const spots = useSpotStore((s) => s.spots);
+  const similarSessions = useSimilarSessions(session, forecast);
   const [editing, setEditing] = useState(false);
   const [editTides, setEditTides] = useState<TidePrediction[]>([]);
 
@@ -186,6 +189,11 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResult
               onConfirm={handleSave}
             />
           </View>
+        )}
+
+        {/* Similar past sessions — upcoming cards only */}
+        {!isPast && forecast && (
+          <SimilarSessionsPanel similarSessions={similarSessions} />
         )}
       </View>
     </View>
