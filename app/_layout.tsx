@@ -52,16 +52,18 @@ export default function RootLayout() {
   return <RootLayoutNav />;
 }
 
-/** Re-fetches all user-scoped stores when auth state changes. */
+/** Re-fetches all user-scoped stores once auth is ready and when user changes. */
 function AuthRefreshBridge() {
+  const initialized = useAuthStore((s) => s.initialized);
   const userId = useAuthStore((s) => s.user?.id);
 
   useEffect(() => {
+    if (!initialized) return; // Don't fetch until auth session is restored
     useSessionStore.getState().fetchSessions();
     useSettingsStore.getState().fetchSettings();
     usePreferenceStore.getState().fetchPreferences();
     useSurfboardStore.getState().fetchBoards();
-  }, [userId]);
+  }, [initialized, userId]);
 
   return null;
 }

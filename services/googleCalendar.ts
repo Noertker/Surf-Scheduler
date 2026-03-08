@@ -83,15 +83,28 @@ export async function createGCalEvent(session: SurfSession): Promise<string> {
   return event.id as string;
 }
 
-export async function updateGCalEvent(eventId: string, session: SurfSession): Promise<void> {
+/**
+ * Update an existing Google Calendar event.
+ * Returns the (possibly new) event ID — if the original ID is not found (404),
+ * creates a new event and returns the new ID.
+ */
+export async function updateGCalEvent(eventId: string, session: SurfSession): Promise<string> {
   const res = await gcalFetch(`/calendars/primary/events/${eventId}`, {
     method: 'PUT',
     body: JSON.stringify(buildEventBody(session)),
   });
-  if (!res.ok && res.status !== 404) {
+
+  // Event doesn't exist in GCal (e.g. ID is from local expo-calendar) — create fresh
+  if (res.status === 404) {
+    return createGCalEvent(session);
+  }
+
+  if (!res.ok) {
     const err = await res.json();
     throw new Error(`Google Calendar error: ${err.error?.message ?? res.statusText}`);
   }
+
+  return eventId;
 }
 
 export async function deleteGCalEvent(eventId: string): Promise<void> {

@@ -7,7 +7,7 @@ export async function fetchSpotPreferences(
   let query = supabase.from('spot_preferences').select('*');
 
   if (userId) {
-    query = query.eq('user_id', userId);
+    query = query.or(`user_id.eq.${userId},user_id.is.null`);
   } else {
     query = query.is('user_id', null);
   }

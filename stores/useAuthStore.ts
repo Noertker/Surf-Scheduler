@@ -30,8 +30,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ session, user: session?.user ?? null, initialized: true });
 
     supabase.auth.onAuthStateChange(async (event, session) => {
-      set({ session, user: session?.user ?? null });
-
       // Persist Google provider tokens when first received
       if (session?.provider_token) {
         await authStorage.setItem(PROVIDER_TOKEN_KEY, session.provider_token);
@@ -40,7 +38,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await authStorage.setItem(PROVIDER_REFRESH_KEY, session.provider_refresh_token);
       }
 
-      // On first sign-in, claim any anonymous data
+      // On first sign-in, claim anonymous data BEFORE updating state
+      // so the AuthRefreshBridge re-fetch finds the claimed rows
       if (event === 'SIGNED_IN' && session?.user) {
         try {
           await claimAnonymousData(session.user.id);
@@ -48,16 +47,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           console.warn('Data migration failed:', err);
         }
       }
+
+      set({ session, user: session?.user ?? null });
     });
   },
 
   signInWithGoogle: async () => {
     set({ loading: true });
     try {
+      const redirectTo = Platform.OS === 'web'
+        ? window.location.origin  // e.g. http://localhost:8081
+        : 'surfscheduler://auth/callback';
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'surfscheduler://auth/callback',
+          redirectTo,
           scopes: 'https://www.googleapis.com/auth/calendar.events',
           queryParams: {
             access_type: 'offline',
@@ -71,7 +76,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (data?.url) {
         if (Platform.OS === 'web') {
-          // On web, redirect in the same window
+          // On web, redirect back to the app URL — detectSessionInUrl handles the rest
           window.location.href = data.url;
         } else {
           // On native, use expo-web-browser

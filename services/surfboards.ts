@@ -7,7 +7,7 @@ export async function fetchSurfboards(): Promise<Surfboard[]> {
     .from('surfboards')
     .select('*')
     .order('created_at', { ascending: false });
-  query = uid ? query.eq('user_id', uid) : query.is('user_id', null);
+  query = uid ? query.or(`user_id.eq.${uid},user_id.is.null`) : query.is('user_id', null);
 
   const { data, error } = await query;
   if (error) throw error;

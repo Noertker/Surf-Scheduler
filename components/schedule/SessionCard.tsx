@@ -1,10 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
 import { CalendarSyncButton } from '@/components/schedule/CalendarSyncButton';
 import { LiveForecast, degToCompass } from '@/hooks/useScheduleForecasts';
 import { SurfSession } from '@/types/session';
+import { TidePrediction } from '@/types/tide';
+import { useSpotStore } from '@/stores/useSpotStore';
+import { getTidePredictions } from '@/services/noaa';
+import { computeTimelinePredictions } from '@/services/tidePredictor';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
 
@@ -20,9 +24,12 @@ interface Props {
 export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResults, isPast }: Props) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const spots = useSpotStore((s) => s.spots);
   const [editing, setEditing] = useState(false);
   const [editStart, setEditStart] = useState<Date | null>(null);
   const [editEnd, setEditEnd] = useState<Date | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [editTides, setEditTides] = useState<TidePrediction[]>([]);
 
   const start = new Date(session.planned_start);
   const end = new Date(session.planned_end);
@@ -37,6 +44,51 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResult
     d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
   const timeStr = `${fmtTime(start)} - ${fmtTime(end)}`;
+
+  // Fetch tide predictions when editing starts
+  useEffect(() => {
+    if (!editing) { setEditTides([]); return; }
+    const spot = spots.find((sp) => sp.id === session.spot_id);
+    if (!spot?.noaa_station_id) return;
+
+    const dayStart = new Date(session.planned_start);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    (async () => {
+      try {
+        const preds = await getTidePredictions(spot.noaa_station_id!, dayStart, dayEnd, '6');
+        setEditTides(preds);
+      } catch {
+        try {
+          const preds = computeTimelinePredictions(spot.noaa_station_id!, dayStart, dayEnd);
+          setEditTides(preds);
+        } catch { /* ignore */ }
+      }
+    })();
+  }, [editing]);
+
+  // Interpolate tide height from predictions
+  const interpolateTide = (targetMs: number): number | null => {
+    if (editTides.length === 0) return null;
+    let best = editTides[0];
+    let bestDiff = Math.abs(best.timestamp.getTime() - targetMs);
+    for (const p of editTides) {
+      const diff = Math.abs(p.timestamp.getTime() - targetMs);
+      if (diff < bestDiff) { best = p; bestDiff = diff; }
+    }
+    return best.heightFt;
+  };
+
+  const editTideStart = useMemo(
+    () => editStart ? interpolateTide(editStart.getTime()) : null,
+    [editTides, editStart]
+  );
+  const editTideEnd = useMemo(
+    () => editEnd ? interpolateTide(editEnd.getTime()) : null,
+    [editTides, editEnd]
+  );
 
   const handleEditStart = () => {
     setEditing(true);
@@ -54,10 +106,20 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResult
 
   const handleSave = async () => {
     if (!editStart || !editEnd) return;
-    await onUpdate(session.id, {
-      planned_start: editStart.toISOString(),
-      planned_end: editEnd.toISOString(),
-    });
+    setSaving(true);
+    try {
+      const updates: Record<string, unknown> = {
+        planned_start: editStart.toISOString(),
+        planned_end: editEnd.toISOString(),
+      };
+      if (editTideStart != null) updates.tide_start_ft = editTideStart;
+      if (editTideEnd != null) updates.tide_end_ft = editTideEnd;
+
+      await onUpdate(session.id, updates);
+    } catch (err) {
+      console.error('Save failed:', err);
+    }
+    setSaving(false);
     setEditing(false);
   };
 
@@ -175,12 +237,20 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResult
                 <Text style={styles.timeAdjust}>+15m</Text>
               </Pressable>
             </View>
+            {editTideStart != null && editTideEnd != null && (
+              <View style={styles.tidePreviewRow}>
+                <Text style={styles.tidePreviewLabel}>Tide:</Text>
+                <Text style={styles.tidePreviewValue}>
+                  {editTideStart.toFixed(1)}ft {'\u2192'} {editTideEnd.toFixed(1)}ft
+                </Text>
+              </View>
+            )}
             <View style={styles.editActions}>
-              <Pressable onPress={() => setEditing(false)} style={styles.cancelBtn}>
+              <Pressable onPress={() => setEditing(false)} style={styles.cancelBtn} disabled={saving}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
-              <Pressable onPress={handleSave} style={styles.saveBtn}>
-                <Text style={styles.saveText}>Save</Text>
+              <Pressable onPress={handleSave} style={[styles.saveBtn, saving && styles.saveBtnDisabled]} disabled={saving}>
+                <Text style={styles.saveText}>{saving ? 'Saving...' : 'Save'}</Text>
               </Pressable>
             </View>
           </View>
@@ -315,10 +385,30 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 8,
   },
+  saveBtnDisabled: {
+    opacity: 0.6,
+  },
   saveText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  tidePreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+    backgroundColor: 'transparent',
+  },
+  tidePreviewLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textDim,
+  },
+  tidePreviewValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.accent,
   },
   liveLabel: {
     fontSize: 10,

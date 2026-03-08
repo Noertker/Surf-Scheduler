@@ -21,13 +21,32 @@ export function CalendarSyncButton({ session }: Props) {
 
   const isSynced = !!session.gcal_event_id;
 
-  // If Google auth is active, auto-sync handles everything — just show status
-  if (isGoogleAuth) {
+  // If Google auth is active and synced, just show status
+  if (isGoogleAuth && isSynced) {
     return (
       <Pressable hitSlop={8} style={styles.btn} disabled>
-        <Text style={[styles.text, isSynced && styles.textSynced]}>
-          {isSynced ? '\u2713 GCal' : '\u23F3'}
-        </Text>
+        <Text style={[styles.text, styles.textSynced]}>{'\u2713'} GCal</Text>
+      </Pressable>
+    );
+  }
+
+  // Google auth but not yet synced — tappable to force sync
+  if (isGoogleAuth && !isSynced) {
+    const handleGCalSync = async () => {
+      if (syncing) return;
+      setSyncing(true);
+      try {
+        // Trigger a no-op update which will create the GCal event
+        await updateSession(session.id, { notes: session.notes });
+      } catch (err) {
+        console.error('Calendar sync failed:', err);
+      }
+      setSyncing(false);
+    };
+
+    return (
+      <Pressable onPress={handleGCalSync} hitSlop={8} style={styles.btn} disabled={syncing}>
+        <Text style={styles.text}>{syncing ? '...' : 'Sync'}</Text>
       </Pressable>
     );
   }

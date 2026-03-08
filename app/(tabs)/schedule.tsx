@@ -4,6 +4,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
@@ -19,28 +20,35 @@ import { SurfSession } from '@/types/session';
 export default function ScheduleScreen() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { sessions, loading, fetchSessions, removeSession, updateSession, completeSession } =
+  const { sessions, loading, removeSession, updateSession, completeSession } =
     useSessionStore();
   const fetchSpots = useSpotStore((s) => s.fetchSpots);
   const [loggingSession, setLoggingSession] = useState<SurfSession | null>(null);
 
+  // Spots are not user-scoped — safe to fetch on mount.
+  // Sessions are fetched by AuthRefreshBridge after auth is ready.
   useEffect(() => {
     fetchSpots();
-    fetchSessions();
   }, []);
 
   const { forecasts, loading: forecastLoading } =
     useScheduleForecasts(sessions);
 
   const handleDelete = (id: string, spotName: string) => {
-    Alert.alert('Remove Session', `Remove ${spotName} from your schedule?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => removeSession(id),
-      },
-    ]);
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Remove ${spotName} from your schedule?`)) {
+        removeSession(id);
+      }
+    } else {
+      Alert.alert('Remove Session', `Remove ${spotName} from your schedule?`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => removeSession(id),
+        },
+      ]);
+    }
   };
 
   const now = new Date();

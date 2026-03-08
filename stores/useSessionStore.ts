@@ -42,7 +42,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         .from('surf_sessions')
         .select('*')
         .order('planned_start', { ascending: true });
-      query = uid ? query.eq('user_id', uid) : query.is('user_id', null);
+      // Include both user-owned AND unclaimed anonymous sessions
+      query = uid ? query.or(`user_id.eq.${uid},user_id.is.null`) : query.is('user_id', null);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -113,12 +114,31 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           ),
       }));
 
-      // Auto-sync update to Google Calendar (non-blocking)
-      if (updated.gcal_event_id && (await isGCalAvailable())) {
+      // Auto-sync to Google Calendar (non-blocking)
+      if (await isGCalAvailable()) {
         try {
-          await updateGCalEvent(updated.gcal_event_id, updated);
+          let newGcalId: string | null = null;
+          if (updated.gcal_event_id) {
+            // updateGCalEvent re-creates if the old ID is invalid (e.g. local calendar ID)
+            const returnedId = await updateGCalEvent(updated.gcal_event_id, updated);
+            if (returnedId !== updated.gcal_event_id) newGcalId = returnedId;
+          } else {
+            // Session existed before sign-in — create the event now
+            newGcalId = await createGCalEvent(updated);
+          }
+          if (newGcalId) {
+            await supabase
+              .from('surf_sessions')
+              .update({ gcal_event_id: newGcalId })
+              .eq('id', updated.id);
+            set((state) => ({
+              sessions: state.sessions.map((s) =>
+                s.id === updated.id ? { ...s, gcal_event_id: newGcalId } : s
+              ),
+            }));
+          }
         } catch (err) {
-          console.warn('Google Calendar update failed:', err);
+          console.warn('Google Calendar sync failed:', err);
         }
       }
     } catch (err) {

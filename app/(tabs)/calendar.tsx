@@ -25,8 +25,8 @@ export default function DashboardScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { groups, activeGroupId, groupSpots, loading, fetchGroups, setActiveGroup } =
     useGroupStore();
-  const { preferences, fetchPreferences } = usePreferenceStore();
-  const { dayStartHour, dayEndHour, fetchSettings } = useSettingsStore();
+  const { preferences } = usePreferenceStore();
+  const { dayStartHour, dayEndHour } = useSettingsStore();
   const {
     monthlyPredictions,
     monthlyHiLo,
@@ -46,10 +46,10 @@ export default function DashboardScreen() {
   const nextMonth = month === 11 ? 0 : month + 1;
   const nextYear = month === 11 ? year + 1 : year;
 
+  // Groups are not user-scoped — safe to fetch on mount.
+  // Preferences and settings are fetched by AuthRefreshBridge after auth is ready.
   useEffect(() => {
     fetchGroups();
-    fetchPreferences();
-    fetchSettings();
   }, []);
 
   useEffect(() => {
