@@ -20,9 +20,10 @@ async function gcalFetch(path: string, options: RequestInit = {}): Promise<Respo
     },
   });
 
-  // If 401, try refreshing and retry once
+  // If 401, clear the stale token and force a refresh before retrying
   if (res.status === 401) {
     const { useAuthStore } = require('@/stores/useAuthStore');
+    await useAuthStore.getState().clearGoogleToken();
     const freshToken = await useAuthStore.getState().getGoogleAccessToken();
     if (!freshToken) throw new Error('Google token refresh failed');
 

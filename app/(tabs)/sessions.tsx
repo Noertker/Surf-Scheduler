@@ -8,16 +8,16 @@ import {
 } from 'react-native';
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
-import { SessionCard } from '@/components/schedule/SessionCard';
-import { SessionResultEditor } from '@/components/schedule/SessionResultEditor';
+import { SessionCard } from '@/components/sessions/SessionCard';
+import { SessionResultEditor } from '@/components/sessions/SessionResultEditor';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useSpotStore } from '@/stores/useSpotStore';
-import { useScheduleForecasts } from '@/hooks/useScheduleForecasts';
+import { useSessionForecasts } from '@/hooks/useSessionForecasts';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
 import { SurfSession } from '@/types/session';
 
-export default function ScheduleScreen() {
+export default function SessionsScreen() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { sessions, loading, removeSession, updateSession, completeSession } =
@@ -32,7 +32,7 @@ export default function ScheduleScreen() {
   }, []);
 
   const { forecasts, loading: forecastLoading } =
-    useScheduleForecasts(sessions);
+    useSessionForecasts(sessions);
 
   const handleDelete = (id: string, spotName: string) => {
     if (Platform.OS === 'web') {

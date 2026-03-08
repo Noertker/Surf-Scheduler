@@ -17,6 +17,7 @@ interface AuthState {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   getGoogleAccessToken: () => Promise<string | null>;
+  clearGoogleToken: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -108,39 +109,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   getGoogleAccessToken: async () => {
-    // 1. Check current session's provider_token
+    // 1. Check current session's provider_token (only set on initial sign-in)
     const { session } = get();
     if (session?.provider_token) return session.provider_token;
 
-    // 2. Check locally stored token
+    // 2. Check locally stored access token
     const stored = await authStorage.getItem(PROVIDER_TOKEN_KEY);
     if (stored) return stored;
 
-    // 3. Try refreshing the session
-    const { data } = await supabase.auth.refreshSession();
-    if (data.session?.provider_token) {
-      await authStorage.setItem(PROVIDER_TOKEN_KEY, data.session.provider_token);
-      return data.session.provider_token;
+    // 3. Try refreshing the Supabase session (may return refreshed provider token)
+    try {
+      const { data } = await supabase.auth.refreshSession();
+      if (data.session?.provider_token) {
+        await authStorage.setItem(PROVIDER_TOKEN_KEY, data.session.provider_token);
+        return data.session.provider_token;
+      }
+    } catch {
+      // fall through
     }
 
-    // 4. Try using stored refresh token directly with Google
+    // 4. Refresh via server-side Edge Function (keeps client_secret off the client)
     const refreshToken = await authStorage.getItem(PROVIDER_REFRESH_KEY);
-    const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
-    if (refreshToken && clientId) {
+    if (refreshToken) {
       try {
-        const res = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            client_id: clientId,
-            grant_type: 'refresh_token',
-            refresh_token: refreshToken,
-          }).toString(),
-        });
-        if (res.ok) {
-          const { access_token } = await res.json();
-          await authStorage.setItem(PROVIDER_TOKEN_KEY, access_token);
-          return access_token as string;
+        const { data: fnData, error: fnError } = await supabase.functions.invoke(
+          'refresh-google-token',
+          { body: { refresh_token: refreshToken } }
+        );
+        if (!fnError && fnData?.access_token) {
+          await authStorage.setItem(PROVIDER_TOKEN_KEY, fnData.access_token);
+          return fnData.access_token as string;
         }
       } catch {
         // fall through
@@ -148,5 +146,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     return null;
+  },
+
+  clearGoogleToken: async () => {
+    await authStorage.removeItem(PROVIDER_TOKEN_KEY);
   },
 }));

@@ -42,9 +42,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="schedule"
+        name="sessions"
         options={{
-          title: 'Schedule',
+          title: 'Sessions',
           headerTitleStyle: { color: colors.text, fontWeight: '700', letterSpacing: 1 },
           tabBarIcon: ({ color }) => (
             <Text style={{ fontSize: 22, color }}>📋</Text>

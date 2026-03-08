@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { Alert, Modal, Platform, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
 import { TideChart } from '@/components/charts/TideChart';
 import { WindChart } from '@/components/charts/WindChart';
 import { SwellChart } from '@/components/charts/SwellChart';
+import { SessionTimeEditor } from '@/components/sessions/SessionTimeEditor';
 import { ThemeColors } from '@/constants/theme';
 import { useColors } from '@/hooks/useColors';
 import { TidePrediction, TideWindow } from '@/types/tide';
@@ -39,8 +40,6 @@ export function DayDetail({
 
   const [selectedIdx, setSelectedIdx] = useState<number | null>(0);
   const [schedulingIdx, setSchedulingIdx] = useState<number | null>(null);
-  const [customStart, setCustomStart] = useState<Date | null>(null);
-  const [customEnd, setCustomEnd] = useState<Date | null>(null);
 
   const { addSession } = useSessionStore();
 
@@ -73,37 +72,21 @@ export function DayDetail({
   const selectedWindow = selectedIdx != null ? sortedWindows[selectedIdx] : null;
 
   const handleSchedulePress = (idx: number) => {
-    const w = sortedWindows[idx];
     setSchedulingIdx(idx);
-    setCustomStart(new Date(w.start));
-    setCustomEnd(new Date(w.end));
   };
 
-  const adjustTime = (which: 'start' | 'end', minutes: number) => {
-    if (which === 'start' && customStart) {
-      setCustomStart(new Date(customStart.getTime() + minutes * 60_000));
-    } else if (which === 'end' && customEnd) {
-      setCustomEnd(new Date(customEnd.getTime() + minutes * 60_000));
-    }
-  };
+  const handleConfirmSchedule = async (
+    w: TideWindow,
+    start: Date,
+    end: Date,
+    tideStartFt: number | null,
+    tideEndFt: number | null,
+  ) => {
+    const startMs = start.getTime();
+    const endMs = end.getTime();
 
-  const handleConfirmSchedule = async () => {
-    if (schedulingIdx == null || !customStart || !customEnd) return;
-    const w = sortedWindows[schedulingIdx];
-    const startMs = customStart.getTime();
-    const endMs = customEnd.getTime();
-
-    const closestHeight = (target: number) => {
-      let best = predictions[0];
-      let bestDiff = Math.abs(best.timestamp.getTime() - target);
-      for (const p of predictions) {
-        const diff = Math.abs(p.timestamp.getTime() - target);
-        if (diff < bestDiff) { best = p; bestDiff = diff; }
-      }
-      return best.heightFt;
-    };
-    const tideStart = predictions.length > 0 ? closestHeight(startMs) : w.startHeight;
-    const tideEnd = predictions.length > 0 ? closestHeight(endMs) : w.endHeight;
+    const tideStart = tideStartFt ?? w.startHeight;
+    const tideEnd = tideEndFt ?? w.endHeight;
 
     const windInRange = dayWind.filter(
       (r) => r.timestamp.getTime() >= startMs && r.timestamp.getTime() <= endMs
@@ -125,14 +108,18 @@ export function DayDetail({
     const { getUserId } = require('@/services/supabase');
     await addSession({
       user_id: getUserId(), spot_id: w.spotId, spot_name: w.spotName,
-      planned_start: customStart.toISOString(), planned_end: customEnd.toISOString(),
+      planned_start: start.toISOString(), planned_end: end.toISOString(),
       tide_start_ft: tideStart, tide_end_ft: tideEnd,
       avg_wind_mph: avgWind, avg_gusts_mph: avgGusts, avg_swell_ft: avgSwell,
       notes: null, gcal_event_id: null,
       completed: false, rating: null, board_id: null, wave_type: null, result_notes: null,
     });
     setSchedulingIdx(null);
-    Alert.alert('Scheduled!', `${w.spotName} added to your schedule.`);
+    if (Platform.OS === 'web') {
+      window.alert(`${w.spotName} added to your schedule.`);
+    } else {
+      Alert.alert('Scheduled!', `${w.spotName} added to your schedule.`);
+    }
   };
 
   const highlightWindow = useMemo(() => {
@@ -203,41 +190,19 @@ export function DayDetail({
                           )}
                         </View>
                       </Pressable>
-                      {scheduling && customStart && customEnd && (
+                      {scheduling && (
                         <View style={styles.scheduleForm}>
                           <Text style={styles.scheduleFormTitle}>SCHEDULE SESSION</Text>
-                          <View style={styles.timeRow}>
-                            <Text style={styles.timeLabel}>Start:</Text>
-                            <Pressable onPress={() => adjustTime('start', -15)} hitSlop={4}>
-                              <Text style={styles.timeAdjust}>-15m</Text>
-                            </Pressable>
-                            <Text style={styles.timeValue}>
-                              {customStart.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                            </Text>
-                            <Pressable onPress={() => adjustTime('start', 15)} hitSlop={4}>
-                              <Text style={styles.timeAdjust}>+15m</Text>
-                            </Pressable>
-                          </View>
-                          <View style={styles.timeRow}>
-                            <Text style={styles.timeLabel}>End:</Text>
-                            <Pressable onPress={() => adjustTime('end', -15)} hitSlop={4}>
-                              <Text style={styles.timeAdjust}>-15m</Text>
-                            </Pressable>
-                            <Text style={styles.timeValue}>
-                              {customEnd.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                            </Text>
-                            <Pressable onPress={() => adjustTime('end', 15)} hitSlop={4}>
-                              <Text style={styles.timeAdjust}>+15m</Text>
-                            </Pressable>
-                          </View>
-                          <View style={styles.scheduleActions}>
-                            <Pressable onPress={() => setSchedulingIdx(null)} style={styles.cancelBtn}>
-                              <Text style={styles.cancelText}>Cancel</Text>
-                            </Pressable>
-                            <Pressable onPress={handleConfirmSchedule} style={styles.confirmBtn}>
-                              <Text style={styles.confirmText}>+ SCHEDULE</Text>
-                            </Pressable>
-                          </View>
+                          <SessionTimeEditor
+                            initialStart={new Date(w.start)}
+                            initialEnd={new Date(w.end)}
+                            predictions={predictions}
+                            confirmLabel="+ SCHEDULE"
+                            onCancel={() => setSchedulingIdx(null)}
+                            onConfirm={(start, end, tideStartFt, tideEndFt) =>
+                              handleConfirmSchedule(w, start, end, tideStartFt, tideEndFt)
+                            }
+                          />
                         </View>
                       )}
                     </View>
@@ -359,29 +324,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   noWindows: { textAlign: 'center', marginTop: 16, marginBottom: 16, fontSize: 13, color: colors.textDim },
   chartSection: { marginTop: 20 },
   scheduleForm: {
-    marginTop: -4, marginBottom: 8, padding: 12, borderRadius: 10,
-    borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primaryDark,
+    marginTop: -4, marginBottom: 8,
   },
   scheduleFormTitle: {
     fontSize: 11, fontWeight: '700', color: colors.textSecondary,
     letterSpacing: 1, marginBottom: 8,
   },
-  timeRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginBottom: 6, backgroundColor: 'transparent',
-  },
-  timeLabel: { fontSize: 13, fontWeight: '600', width: 40, color: colors.textSecondary },
-  timeAdjust: {
-    fontSize: 13, fontWeight: '600', color: colors.primary,
-    paddingHorizontal: 6, paddingVertical: 4,
-  },
-  timeValue: { fontSize: 14, fontWeight: '700', minWidth: 80, textAlign: 'center', color: colors.text },
-  scheduleActions: {
-    flexDirection: 'row', justifyContent: 'flex-end', gap: 12,
-    marginTop: 8, backgroundColor: 'transparent',
-  },
-  cancelBtn: { paddingHorizontal: 16, paddingVertical: 8 },
-  cancelText: { fontSize: 13, color: colors.textTertiary },
-  confirmBtn: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.primary, borderRadius: 6 },
-  confirmText: { color: '#fff', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
 });

@@ -38,7 +38,7 @@ export { degToCompass };
  * Groups upcoming sessions by spot, fetches tide/wind/swell once per spot,
  * then slices results per session's time range.
  */
-export function useScheduleForecasts(sessions: SurfSession[]): {
+export function useSessionForecasts(sessions: SurfSession[]): {
   forecasts: Map<string, LiveForecast>;
   loading: boolean;
 } {

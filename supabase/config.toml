@@ -283,6 +283,11 @@ enabled = false
 # Obtain from https://clerk.com/setup/supabase
 # domain = "example.clerk.accounts.dev"
 
+[functions.refresh-google-token]
+# Disable built-in JWT verification — the function checks auth itself.
+# Works around supabase-edge-runtime jose ES256 CryptoKey bug.
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Configure one of the supported request policies: `oneshot`, `per_worker`.
