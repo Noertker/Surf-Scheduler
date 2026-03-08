@@ -5,7 +5,7 @@ import { supabase } from './supabase';
  * Called once on first sign-in.
  */
 export async function claimAnonymousData(userId: string): Promise<void> {
-  const tables = ['surf_sessions', 'user_settings', 'spot_preferences', 'surfboards'];
+  const tables = ['surf_sessions', 'user_settings', 'spot_preferences', 'surfboards', 'surfer_profiles'];
 
   for (const table of tables) {
     await supabase

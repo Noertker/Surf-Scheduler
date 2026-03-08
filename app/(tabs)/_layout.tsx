@@ -33,6 +33,16 @@ export default function TabLayout() {
         headerShown: true,
       }}>
       <Tabs.Screen
+        name="surfer"
+        options={{
+          title: 'Surfer',
+          headerTitleStyle: { color: colors.text, fontWeight: '700', letterSpacing: 1 },
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>🏄</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="calendar"
         options={{
           headerTitle: () => <DashboardHeader />,
@@ -48,16 +58,6 @@ export default function TabLayout() {
           headerTitleStyle: { color: colors.text, fontWeight: '700', letterSpacing: 1 },
           tabBarIcon: ({ color }) => (
             <Text style={{ fontSize: 22, color }}>📋</Text>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="surfer"
-        options={{
-          title: 'Surfer',
-          headerTitleStyle: { color: colors.text, fontWeight: '700', letterSpacing: 1 },
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 22, color }}>🏄</Text>
           ),
         }}
       />

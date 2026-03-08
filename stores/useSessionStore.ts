@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { supabase, getUserId } from '@/services/supabase';
-import { SurfSession, WaveType } from '@/types/session';
+import { SurfSession, WaveType, ConditionsSnapshot, SessionFeedback } from '@/types/session';
 import {
   createGCalEvent,
   updateGCalEvent,
@@ -10,7 +10,8 @@ import {
 
 type SessionUpdates = Partial<Pick<SurfSession,
   'planned_start' | 'planned_end' | 'notes' |
-  'completed' | 'rating' | 'board_id' | 'wave_type' | 'result_notes' | 'gcal_event_id'
+  'completed' | 'rating' | 'board_id' | 'wave_type' | 'result_notes' | 'gcal_event_id' |
+  'conditions_snapshot' | 'feedback'
 >>;
 
 interface SessionState {
@@ -26,6 +27,8 @@ interface SessionState {
     board_id?: string;
     wave_type?: WaveType;
     result_notes?: string;
+    conditions_snapshot?: ConditionsSnapshot;
+    feedback?: SessionFeedback;
   }) => Promise<void>;
 }
 
@@ -180,6 +183,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         board_id: results.board_id ?? null,
         wave_type: results.wave_type ?? null,
         result_notes: results.result_notes ?? null,
+        conditions_snapshot: results.conditions_snapshot ?? null,
+        feedback: results.feedback ?? null,
       };
       const { data, error } = await supabase
         .from('surf_sessions')

@@ -13,7 +13,10 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   initialized: boolean;
+  authError: string | null;
   initialize: () => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   getGoogleAccessToken: () => Promise<string | null>;
@@ -25,6 +28,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   loading: false,
   initialized: false,
+  authError: null,
 
   initialize: async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -51,6 +55,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       set({ session, user: session?.user ?? null });
     });
+  },
+
+  signUp: async (email, password) => {
+    set({ loading: true, authError: null });
+    try {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+    } catch (err) {
+      set({ authError: (err as Error).message });
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  signInWithEmail: async (email, password) => {
+    set({ loading: true, authError: null });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } catch (err) {
+      set({ authError: (err as Error).message });
+    } finally {
+      set({ loading: false });
+    }
   },
 
   signInWithGoogle: async () => {

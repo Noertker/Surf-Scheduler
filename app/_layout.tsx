@@ -5,12 +5,15 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
+import { ActivityIndicator } from 'react-native';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { AuthScreen } from '@/components/auth/AuthScreen';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { usePreferenceStore } from '@/stores/usePreferenceStore';
 import { useSurfboardStore } from '@/stores/useSurfboardStore';
+import { useProfileStore } from '@/stores/useProfileStore';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -63,6 +66,7 @@ function AuthRefreshBridge() {
     useSettingsStore.getState().fetchSettings();
     usePreferenceStore.getState().fetchPreferences();
     useSurfboardStore.getState().fetchBoards();
+    useProfileStore.getState().fetchProfile();
   }, [initialized, userId]);
 
   return null;
@@ -70,13 +74,23 @@ function AuthRefreshBridge() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const initialized = useAuthStore((s) => s.initialized);
+  const user = useAuthStore((s) => s.user);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthRefreshBridge />
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
+      {!initialized ? (
+        <ActivityIndicator size="large" style={{ flex: 1 }} />
+      ) : !user ? (
+        <AuthScreen />
+      ) : (
+        <>
+          <AuthRefreshBridge />
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          </Stack>
+        </>
+      )}
     </ThemeProvider>
   );
 }

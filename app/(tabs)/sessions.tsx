@@ -122,6 +122,7 @@ export default function SessionsScreen() {
         <SessionResultEditor
           visible={!!loggingSession}
           session={loggingSession}
+          forecast={forecasts.get(loggingSession.id)}
           onSave={async (results) => {
             await completeSession(loggingSession.id, results);
             setLoggingSession(null);

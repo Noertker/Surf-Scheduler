@@ -9,33 +9,21 @@ import { ThemeColors } from '@/constants/theme';
 export function AccountSection() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { user, loading, signInWithGoogle, signOut } = useAuthStore();
+  const { user, signOut } = useAuthStore();
 
-  if (!user) {
-    return (
-      <View style={styles.container}>
-        <Pressable
-          onPress={signInWithGoogle}
-          disabled={loading}
-          style={styles.googleButton}
-        >
-          <Text style={styles.googleButtonText}>
-            {loading ? 'Signing in...' : 'Sign in with Google'}
-          </Text>
-        </Pressable>
-        <Text style={styles.hint}>
-          Sync surf sessions to Google Calendar automatically
-        </Text>
-      </View>
-    );
-  }
+  if (!user) return null;
+
+  const isGoogleUser = user.app_metadata?.provider === 'google';
 
   return (
     <View style={styles.container}>
-      <View style={styles.accountRow}>
+      <Text style={styles.heading}>Account</Text>
+      <View style={styles.card}>
         <View style={styles.accountInfo}>
-          <Text style={styles.email}>{user.email}</Text>
-          <Text style={styles.status}>Google Calendar connected</Text>
+          <Text style={styles.emailDisplay}>{user.email}</Text>
+          <Text style={styles.status}>
+            {isGoogleUser ? 'Google Calendar connected' : 'Signed in with email'}
+          </Text>
         </View>
         <Pressable onPress={signOut} hitSlop={8} style={styles.signOutBtn}>
           <Text style={styles.signOutText}>Sign Out</Text>
@@ -49,34 +37,27 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     padding: 16,
   },
-  googleButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  googleButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  heading: {
+    fontSize: 20,
     fontWeight: '700',
+    color: colors.text,
+    marginBottom: 16,
   },
-  hint: {
-    fontSize: 12,
-    color: colors.textDim,
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  accountRow: {
+  card: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'transparent',
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   accountInfo: {
     flex: 1,
     backgroundColor: 'transparent',
   },
-  email: {
+  emailDisplay: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.text,

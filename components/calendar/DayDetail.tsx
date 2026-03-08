@@ -113,6 +113,7 @@ export function DayDetail({
       avg_wind_mph: avgWind, avg_gusts_mph: avgGusts, avg_swell_ft: avgSwell,
       notes: null, gcal_event_id: null,
       completed: false, rating: null, board_id: null, wave_type: null, result_notes: null,
+      conditions_snapshot: null, feedback: null,
     });
     setSchedulingIdx(null);
     if (Platform.OS === 'web') {

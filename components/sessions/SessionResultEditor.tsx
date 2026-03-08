@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, StyleSheet, Pressable, TextInput, ScrollView } from 'react-native';
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
-import { SurfSession, WaveType } from '@/types/session';
-import { Surfboard } from '@/types/surfboard';
+import { SurfSession, WaveType, ConditionsSnapshot, SessionFeedback } from '@/types/session';
+import { SURF_SKILL_OPTIONS } from '@/types/profile';
+import { LiveForecast } from '@/hooks/useSessionForecasts';
 import { useSurfboardStore } from '@/stores/useSurfboardStore';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
@@ -11,38 +12,89 @@ import { ThemeColors } from '@/constants/theme';
 interface Props {
   visible: boolean;
   session: SurfSession;
+  forecast?: LiveForecast;
   onSave: (results: {
     rating: number;
     board_id?: string;
     wave_type?: WaveType;
     result_notes?: string;
+    conditions_snapshot?: ConditionsSnapshot;
+    feedback?: SessionFeedback;
   }) => void;
   onClose: () => void;
 }
 
 const WAVE_TYPES: WaveType[] = ['punchy', 'hollow', 'mushy'];
-const RATINGS = [1, 2, 3, 4, 5];
+const RATINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-export function SessionResultEditor({ visible, session, onSave, onClose }: Props) {
+export function SessionResultEditor({ visible, session, forecast, onSave, onClose }: Props) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { boards, fetchBoards } = useSurfboardStore();
 
-  const [rating, setRating] = useState(session.rating ?? 3);
+  const [rating, setRating] = useState(session.rating ?? 5);
   const [boardId, setBoardId] = useState<string | undefined>(session.board_id ?? undefined);
   const [waveType, setWaveType] = useState<WaveType | undefined>(session.wave_type ?? undefined);
   const [notes, setNotes] = useState(session.result_notes ?? '');
+
+  // Expanded feedback fields
+  const [waveCount, setWaveCount] = useState(
+    session.feedback?.waveCountEstimate?.toString() ?? ''
+  );
+  const [boardFeel, setBoardFeel] = useState(session.feedback?.boardFeelRating ?? 5);
+  const [focusGoals, setFocusGoals] = useState<string[]>(
+    session.feedback?.focusGoalsWorked ?? []
+  );
+  const [whatClicked, setWhatClicked] = useState(session.feedback?.whatClicked ?? '');
+  const [whatDidnt, setWhatDidnt] = useState(session.feedback?.whatDidnt ?? '');
 
   useEffect(() => {
     if (visible) fetchBoards();
   }, [visible]);
 
+  const toggleGoal = (goal: string) => {
+    setFocusGoals((prev) =>
+      prev.includes(goal) ? prev.filter((g) => g !== goal) : [...prev, goal]
+    );
+  };
+
   const handleSave = () => {
+    // Freeze conditions from live forecast at feedback time
+    const conditionsSnapshot: ConditionsSnapshot | undefined = forecast
+      ? {
+          tide: forecast.tide,
+          wind: forecast.wind,
+          swell: forecast.swell
+            ? {
+                primaryHeightFt: forecast.swell.primaryHeightFt,
+                primaryDirectionDeg: forecast.swell.primaryDirectionDeg,
+                primaryPeriodS: forecast.swell.primaryPeriodS,
+                primaryPeakPeriodS: forecast.swell.primaryPeakPeriodS,
+                secondaryHeightFt: forecast.swell.secondaryHeightFt,
+                secondaryDirectionDeg: forecast.swell.secondaryDirectionDeg,
+                secondaryPeriodS: forecast.swell.secondaryPeriodS,
+                combinedHeightFt: forecast.swell.combinedHeightFt,
+                energyKj: forecast.swell.energyKj,
+              }
+            : null,
+        }
+      : undefined;
+
+    const waveCountNum = parseInt(waveCount, 10);
+
     onSave({
       rating,
       board_id: boardId,
       wave_type: waveType,
       result_notes: notes.trim() || undefined,
+      conditions_snapshot: conditionsSnapshot,
+      feedback: {
+        waveCountEstimate: isNaN(waveCountNum) ? null : waveCountNum,
+        boardFeelRating: boardFeel,
+        focusGoalsWorked: focusGoals,
+        whatClicked: whatClicked.trim() || null,
+        whatDidnt: whatDidnt.trim() || null,
+      },
     });
   };
 
@@ -60,13 +112,17 @@ export function SessionResultEditor({ visible, session, onSave, onClose }: Props
           <Text style={styles.subtitle}>{session.spot_name}</Text>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Rating */}
-            <Text style={styles.fieldLabel}>RATING</Text>
-            <View style={styles.ratingRow}>
+            {/* Rating 1-10 */}
+            <Text style={styles.fieldLabel}>OVERALL RATING</Text>
+            <View style={styles.optionRow}>
               {RATINGS.map((r) => (
-                <Pressable key={r} onPress={() => setRating(r)} style={styles.starBtn}>
-                  <Text style={[styles.star, r <= rating && styles.starActive]}>
-                    {r <= rating ? '\u2605' : '\u2606'}
+                <Pressable
+                  key={r}
+                  onPress={() => setRating(r)}
+                  style={[styles.ratingChip, r === rating && styles.optionActive]}
+                >
+                  <Text style={[styles.ratingChipText, r === rating && styles.optionTextActive]}>
+                    {r}
                   </Text>
                 </Pressable>
               ))}
@@ -88,7 +144,18 @@ export function SessionResultEditor({ visible, session, onSave, onClose }: Props
               ))}
             </View>
 
-            {/* Board */}
+            {/* Wave Count */}
+            <Text style={styles.fieldLabel}>WAVES CAUGHT (ESTIMATE)</Text>
+            <TextInput
+              style={styles.input}
+              value={waveCount}
+              onChangeText={setWaveCount}
+              keyboardType="number-pad"
+              placeholder="0"
+              placeholderTextColor={colors.textDim}
+            />
+
+            {/* Board Used */}
             {boards.length > 0 && (
               <>
                 <Text style={styles.fieldLabel}>BOARD USED</Text>
@@ -108,13 +175,76 @@ export function SessionResultEditor({ visible, session, onSave, onClose }: Props
               </>
             )}
 
-            {/* Notes */}
+            {/* Board Feel */}
+            {boardId && (
+              <>
+                <Text style={styles.fieldLabel}>BOARD FEEL</Text>
+                <View style={styles.optionRow}>
+                  {RATINGS.map((r) => (
+                    <Pressable
+                      key={r}
+                      onPress={() => setBoardFeel(r)}
+                      style={[styles.ratingChip, r === boardFeel && styles.optionActive]}
+                    >
+                      <Text style={[styles.ratingChipText, r === boardFeel && styles.optionTextActive]}>
+                        {r}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {/* Focus Goals Worked */}
+            <Text style={styles.fieldLabel}>FOCUS / GOALS WORKED ON</Text>
+            <View style={styles.optionRow}>
+              {SURF_SKILL_OPTIONS.map((skill) => {
+                const active = focusGoals.includes(skill);
+                return (
+                  <Pressable
+                    key={skill}
+                    style={[styles.option, active && styles.optionActive]}
+                    onPress={() => toggleGoal(skill)}
+                  >
+                    <Text style={[styles.optionText, active && styles.optionTextActive]}>
+                      {skill}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* What Clicked */}
+            <Text style={styles.fieldLabel}>WHAT CLICKED</Text>
+            <TextInput
+              style={styles.notesInput}
+              value={whatClicked}
+              onChangeText={setWhatClicked}
+              placeholder="Breakthroughs, things that felt good..."
+              placeholderTextColor={colors.textDim}
+              multiline
+              numberOfLines={2}
+            />
+
+            {/* What Didn't */}
+            <Text style={styles.fieldLabel}>WHAT DIDN'T WORK</Text>
+            <TextInput
+              style={styles.notesInput}
+              value={whatDidnt}
+              onChangeText={setWhatDidnt}
+              placeholder="Struggles, things to work on..."
+              placeholderTextColor={colors.textDim}
+              multiline
+              numberOfLines={2}
+            />
+
+            {/* General Notes */}
             <Text style={styles.fieldLabel}>NOTES</Text>
             <TextInput
               style={styles.notesInput}
               value={notes}
               onChangeText={setNotes}
-              placeholder="How was the session?"
+              placeholder="Anything else about the session?"
               placeholderTextColor={colors.textDim}
               multiline
               numberOfLines={3}
@@ -174,21 +304,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginBottom: 8,
     marginTop: 4,
   },
-  ratingRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
-  },
-  starBtn: {
-    padding: 4,
-  },
-  star: {
-    fontSize: 28,
-    color: colors.textDim,
-  },
-  starActive: {
-    color: colors.warning,
-  },
   optionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -216,6 +331,32 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   optionTextActive: {
     color: '#fff',
   },
+  ratingChip: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ratingChipText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textTertiary,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: colors.text,
+    backgroundColor: colors.cardAlt,
+    marginBottom: 20,
+  },
   notesInput: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -225,7 +366,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 14,
     color: colors.text,
     backgroundColor: colors.cardAlt,
-    minHeight: 80,
+    minHeight: 60,
     textAlignVertical: 'top',
     marginBottom: 16,
   },

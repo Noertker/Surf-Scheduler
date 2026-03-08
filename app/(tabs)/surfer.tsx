@@ -5,32 +5,36 @@ import { Text } from '@/components/shared/Text';
 import { SpotPreferencesSection } from '@/components/surfer/SpotPreferencesSection';
 import { QuiverSection } from '@/components/surfer/QuiverSection';
 import { AccountSection } from '@/components/surfer/AccountSection';
+import { ProfileSection } from '@/components/surfer/ProfileSection';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
 
-type Section = 'spots' | 'quiver' | 'calendar' | 'coaching';
+type Section = 'profile' | 'spots' | 'quiver' | 'account' | 'coaching';
 
 const MENU_ITEMS: { key: Section; label: string; icon: string }[] = [
+  { key: 'profile', label: 'Profile', icon: '\u{1F3C4}\u{200D}\u{2642}\u{FE0F}' },
   { key: 'spots', label: 'Surf Spots', icon: '\u{1F30A}' },
-  { key: 'quiver', label: 'Quiver', icon: '\u{1F3C4}' },
-  { key: 'calendar', label: 'Calendar', icon: '\u{1F4C5}' },
+  { key: 'quiver', label: 'Quiver', icon: '\u{1F6F9}' },
+  { key: 'account', label: 'Account', icon: '\u{1F464}' },
   { key: 'coaching', label: 'Coaching', icon: '\u{1F9E0}' },
 ];
 
 export default function SurferScreen() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [active, setActive] = useState<Section>('spots');
+  const [active, setActive] = useState<Section>('profile');
   const { width } = useWindowDimensions();
   const isWide = width >= 600;
 
   const renderContent = () => {
     switch (active) {
+      case 'profile':
+        return <ProfileSection />;
       case 'spots':
         return <SpotPreferencesSection />;
       case 'quiver':
         return <QuiverSection />;
-      case 'calendar':
+      case 'account':
         return <AccountSection />;
       case 'coaching':
         return (
