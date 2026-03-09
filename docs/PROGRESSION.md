@@ -374,7 +374,7 @@ A structured skill tree for surfer development. Each level has specific skills, 
 
 ---
 
-## Integration with TideCal
+## Integration with Kairo Surf
 
 ### Session Feedback Enhancement
 Add a "Skills Practiced" multi-select to the session log form. Options are drawn from the surfer's current level and one level above (stretch skills):

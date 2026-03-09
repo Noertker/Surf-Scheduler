@@ -13,6 +13,7 @@ import { View } from '@/components/shared/View';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
+import { KairoLogo } from '@/components/shared/KairoLogo';
 
 const PAGES = 3;
 
@@ -78,8 +79,12 @@ export function AuthScreen() {
         {/* Page 1 — Hero */}
         <View style={[styles.page, { width: screenWidth }]}>
           <View style={styles.heroContent}>
-            <Text style={styles.heroEmoji}>🏄‍♂️</Text>
-            <Text style={styles.heroTitle}>More time surfing,{'\n'}less time forecasting</Text>
+            <KairoLogo size={100} />
+            <Text style={styles.heroTitle}>
+              <Text style={styles.heroTitleKairos}>Kairos</Text>
+              <Text style={styles.heroTitleUrf}>urf</Text>
+            </Text>
+            <Text style={styles.heroTagline}>More time surfing,{'\n'}less time forecasting</Text>
             <Text style={styles.heroSubtitle}>
               The only surf forecasting app focused on getting you in the water
               at the right time for your progression.
@@ -223,16 +228,25 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: 32,
       backgroundColor: 'transparent',
     },
-    heroEmoji: {
-      fontSize: 64,
-      marginBottom: 24,
-    },
     heroTitle: {
-      fontSize: 36,
+      fontSize: 32,
       fontWeight: '800',
-      color: colors.text,
       textAlign: 'center',
-      lineHeight: 44,
+      marginTop: 20,
+      marginBottom: 8,
+    },
+    heroTitleKairos: {
+      color: '#0284c7',
+    },
+    heroTitleUrf: {
+      color: '#38bdf8',
+    },
+    heroTagline: {
+      fontSize: 22,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 30,
       marginBottom: 16,
     },
     heroSubtitle: {

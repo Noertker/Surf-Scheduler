@@ -1,4 +1,4 @@
-# Surf Scheduler — Development Plan
+# Kairo Surf — Development Plan
 
 ## Overview
 

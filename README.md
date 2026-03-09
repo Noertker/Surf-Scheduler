@@ -1,4 +1,4 @@
-# Surf Scheduler
+# Kairo Surf
 
 A surf session scheduling app built with Expo (React Native) and Supabase. Displays tide windows, wind, and swell forecasts to help you plan optimal surf sessions. Supports Google Calendar auto-sync.
 

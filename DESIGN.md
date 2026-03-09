@@ -1,4 +1,4 @@
-# Surf Scheduler
+# Kairo Surf
 Goal: Create a simple app that allows a user to track surf spots and be notified when the tide/swell criteria meet their preferences
 
 The Problem: I can spend hours each week just trying to pick out when the tides are going to be good for certain spots and then I make a list of when the tides are going to cooperate.  I just want to put in my spot preferences and have a calendar so I can say, ok I'm surfing Pismo this week, when are my tide windows at the spots. 

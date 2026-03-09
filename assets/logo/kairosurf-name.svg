@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 120" width="520" height="120">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a1520"/>
+      <stop offset="100%" style="stop-color:#060d16"/>
+    </linearGradient>
+
+    <!-- KairoS color — deeper ocean blue -->
+    <linearGradient id="kairoGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5ba4c7"/>
+      <stop offset="100%" style="stop-color:#2272a0"/>
+    </linearGradient>
+
+    <!-- urf color — bright cyan -->
+    <linearGradient id="urfGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#7dd4f0"/>
+      <stop offset="100%" style="stop-color:#22b4d8"/>
+    </linearGradient>
+
+    <!-- The shared S — gradient that transitions from KairoS blue at bottom to urf cyan at top -->
+    <linearGradient id="sharedS" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%"   style="stop-color:#2272a0"/>
+      <stop offset="45%"  style="stop-color:#3d94bc"/>
+      <stop offset="100%" style="stop-color:#7dd4f0"/>
+    </linearGradient>
+
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="520" height="120" rx="0" fill="none"/>
+
+  <!-- KAIRO — deeper blue -->
+  <text x="18" y="82"
+        font-family="'Courier New', Courier, monospace"
+        font-size="72"
+        font-weight="700"
+        fill="url(#kairoGrad)"
+        letter-spacing="-1">KAIRO</text>
+
+  <!-- Shared S — crisp, gradient bottom deep blue to top light cyan -->
+  <text x="226" y="82"
+        font-family="'Courier New', Courier, monospace"
+        font-size="72"
+        font-weight="700"
+        fill="url(#sharedS)">S</text>
+
+  <!-- URF — lighter cyan, same weight -->
+  <text x="272" y="82"
+        font-family="'Courier New', Courier, monospace"
+        font-size="72"
+        font-weight="700"
+        fill="url(#urfGrad)"
+        letter-spacing="-1">URF</text>
+
+  <!-- Light tide curve running behind the full wordmark -->
+  <!-- Dimmed full curve baseline -->
+  <path d="M18,93 C60,93 80,86 110,88 C140,90 155,96 185,91 C210,87 230,80 270,78 C310,76 340,82 380,80 C420,78 450,85 500,84"
+        fill="none" stroke="#2272a0" stroke-width="1" stroke-opacity="0.25" stroke-linecap="round"/>
+
+  <!-- Bright window segment — under KAIROS, fading into surf -->
+  <path d="M18,93 C60,93 80,86 110,88 C140,90 155,96 185,91 C210,87 230,80 270,78"
+        fill="none" stroke="#2272a0" stroke-width="1.5" stroke-opacity="0.55" stroke-linecap="round"/>
+
+  <!-- Kairos underline — solid, runs from start all the way past S -->
+  <line x1="18" y1="92" x2="268" y2="92" stroke="#2272a0" stroke-width="1.5" stroke-opacity="0.5"/>
+
+  <!-- Tagline — bolder, larger, dark blue -->
+  <text x="20" y="113"
+        font-family="'Courier New', Courier, monospace"
+        font-size="13"
+        font-weight="700"
+        fill="#2272a0"
+        letter-spacing="4.5">FIND YOUR MOMENT</text>
+
+</svg>

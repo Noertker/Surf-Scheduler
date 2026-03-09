@@ -1,4 +1,4 @@
-# TideCal Roadmap
+# Kairo Surf Roadmap
 
 ## What's Done (MVP)
 - Spots + tide preferences with region grouping
@@ -31,6 +31,27 @@
 - **Progression UI**: Vertical roadmap with bubbles + lines, expandable detail cards, "Set as Current Level" button
 - **Profile integration**: `skill_stage` column on `surfer_profiles`, flows through to coach context
 - **Coach integration**: Edge function system prompt includes full progression stage map, tailors advice to current stage
+
+---
+
+## Phase 5b — Onboarding Redesign
+
+Streamline onboarding into a single guided flow that feeds directly into the progression framework. Replace the standalone profile editor with an integrated first-run experience.
+
+**Flow:** Sign up → Basic surfer info → Suggested progression level → Set surf spots → Find a session
+
+### Steps
+1. **Sign up** — email/password or Google (existing)
+2. **Basic surfer info** — stance, experience level, how often you surf (minimal questions, no duplication)
+3. **Set progression level** — auto-suggest a starting stage based on onboarding answers, user can adjust up/down on the roadmap UI
+4. **Set surf spots** — pick from spot list or add custom (existing spot picker, surfaced earlier in flow)
+5. **Find a session** — land on calendar with first surf window highlighted, ready to book
+
+### Notes
+- Old ProfileEditor becomes an edit-only screen (not part of first-run)
+- Progression ladder is the primary way to set/view skill level
+- Onboarding answers map to progression suggestions (e.g. "I can catch green waves" → 2a, "I ride a shortboard" → 3b+)
+- Minimize duplicate data entry — derive what you can from progression stage selection
 
 ---
 
@@ -103,12 +124,12 @@ Phase 1 (Schema)
                                     v
                               Phase 5a (Progression Framework)
                                     │
-                              ┌─────┴─────┐
-                              v           v
-                        Phase 6       Phase 7
-                     (Forecast Viz) (Global Spots)
-                              │           │
-                              └─────┬─────┘
+                              ┌─────┼─────┐
+                              v     v     v
+                        Phase 6  Phase 5b  Phase 7
+                     (Forecast) (Onboard) (Spots)
+                              │     │     │
+                              └─────┼─────┘
                                     v
                               Phase 8
                         (Adaptive Calendar)

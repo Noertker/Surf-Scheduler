@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "Surf-Scheduler",
-    "slug": "Surf-Scheduler",
+    "name": "Kairo Surf",
+    "slug": "kairo-surf",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "surfscheduler",
+    "scheme": "kairosurf",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0a1520"
     },
     "ios": {
       "supportsTablet": true
@@ -32,7 +32,7 @@
     "plugins": [
       "expo-router",
       ["expo-calendar", {
-        "calendarPermission": "Surf Scheduler needs calendar access to sync your surf sessions."
+        "calendarPermission": "Kairo Surf needs calendar access to sync your surf sessions."
       }]
     ],
     "experiments": {
