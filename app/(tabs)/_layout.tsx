@@ -3,6 +3,7 @@ import React from 'react';
 import { Text } from 'react-native';
 
 import { DashboardHeader } from '@/components/calendar/DashboardHeader';
+import { KairoWordmark } from '@/components/shared/KairoWordmark';
 import { useColors } from '@/hooks/useColors';
 
 export default function TabLayout() {
@@ -31,6 +32,8 @@ export default function TabLayout() {
         },
         headerTintColor: colors.text,
         headerShown: true,
+        headerRight: () => <KairoWordmark height={18} />,
+        headerRightContainerStyle: { paddingRight: 16 },
       }}>
       <Tabs.Screen
         name="surfer"
