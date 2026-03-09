@@ -82,12 +82,14 @@ export function QuiverSection() {
         <Text style={styles.addText}>+ Add Board</Text>
       </Pressable>
 
-      <BoardEditor
-        visible={editorVisible}
-        board={editingBoard}
-        onSave={handleSave}
-        onClose={() => setEditorVisible(false)}
-      />
+      {editorVisible && (
+        <BoardEditor
+          visible
+          board={editingBoard}
+          onSave={handleSave}
+          onClose={() => setEditorVisible(false)}
+        />
+      )}
     </View>
   );
 }

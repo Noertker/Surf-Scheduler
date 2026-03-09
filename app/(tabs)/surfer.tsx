@@ -6,6 +6,7 @@ import { SpotPreferencesSection } from '@/components/surfer/SpotPreferencesSecti
 import { QuiverSection } from '@/components/surfer/QuiverSection';
 import { AccountSection } from '@/components/surfer/AccountSection';
 import { ProfileSection } from '@/components/surfer/ProfileSection';
+import { CoachingSection } from '@/components/surfer/CoachingSection';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
 
@@ -37,11 +38,7 @@ export default function SurferScreen() {
       case 'account':
         return <AccountSection />;
       case 'coaching':
-        return (
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>AI Coach coming soon</Text>
-          </View>
-        );
+        return <CoachingSection />;
     }
   };
 
@@ -175,14 +172,4 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingBottom: 32,
   },
 
-  // Shared
-  placeholder: {
-    paddingVertical: 60,
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  placeholderText: {
-    fontSize: 14,
-    color: colors.textDim,
-  },
 });

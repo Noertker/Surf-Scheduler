@@ -7,6 +7,7 @@ import { SessionTimeEditor } from '@/components/sessions/SessionTimeEditor';
 import { LiveForecast, degToCompass } from '@/hooks/useSessionForecasts';
 import { useSimilarSessions } from '@/hooks/useSimilarSessions';
 import { SimilarSessionsPanel } from '@/components/sessions/SimilarSessionsPanel';
+import { CoachDebriefModal } from '@/components/sessions/CoachDebriefModal';
 import { SurfSession } from '@/types/session';
 import { TidePrediction } from '@/types/tide';
 import { useSpotStore } from '@/stores/useSpotStore';
@@ -31,6 +32,7 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResult
   const similarSessions = useSimilarSessions(session, forecast);
   const [editing, setEditing] = useState(false);
   const [editTides, setEditTides] = useState<TidePrediction[]>([]);
+  const [showDebrief, setShowDebrief] = useState(false);
 
   const start = new Date(session.planned_start);
   const end = new Date(session.planned_end);
@@ -174,6 +176,9 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResult
             {session.wave_type && (
               <Text style={styles.resultTag}>{session.wave_type}</Text>
             )}
+            <Pressable onPress={() => setShowDebrief(true)} hitSlop={8}>
+              <Text style={styles.debriefText}>Debrief</Text>
+            </Pressable>
           </View>
         )}
 
@@ -196,6 +201,14 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResult
           <SimilarSessionsPanel similarSessions={similarSessions} />
         )}
       </View>
+
+      {showDebrief && (
+        <CoachDebriefModal
+          visible={showDebrief}
+          session={session}
+          onClose={() => setShowDebrief(false)}
+        />
+      )}
     </View>
   );
 }
@@ -320,5 +333,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRadius: 4,
     overflow: 'hidden',
     textTransform: 'capitalize',
+  },
+  debriefText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
+    marginLeft: 'auto',
   },
 });
