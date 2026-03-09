@@ -7,13 +7,15 @@ import { QuiverSection } from '@/components/surfer/QuiverSection';
 import { AccountSection } from '@/components/surfer/AccountSection';
 import { ProfileSection } from '@/components/surfer/ProfileSection';
 import { CoachingSection } from '@/components/surfer/CoachingSection';
+import { ProgressionSection } from '@/components/surfer/ProgressionSection';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
 
-type Section = 'profile' | 'spots' | 'quiver' | 'account' | 'coaching';
+type Section = 'profile' | 'progression' | 'spots' | 'quiver' | 'account' | 'coaching';
 
 const MENU_ITEMS: { key: Section; label: string; icon: string }[] = [
   { key: 'profile', label: 'Profile', icon: '\u{1F3C4}\u{200D}\u{2642}\u{FE0F}' },
+  { key: 'progression', label: 'Progression', icon: '\u{1F4C8}' },
   { key: 'spots', label: 'Surf Spots', icon: '\u{1F30A}' },
   { key: 'quiver', label: 'Quiver', icon: '\u{1F6F9}' },
   { key: 'account', label: 'Account', icon: '\u{1F464}' },
@@ -31,6 +33,8 @@ export default function SurferScreen() {
     switch (active) {
       case 'profile':
         return <ProfileSection />;
+      case 'progression':
+        return <ProgressionSection />;
       case 'spots':
         return <SpotPreferencesSection />;
       case 'quiver':

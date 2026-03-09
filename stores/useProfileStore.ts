@@ -38,6 +38,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         strengths: updates.strengths ?? current?.strengths ?? [],
         weaknesses: updates.weaknesses ?? current?.weaknesses ?? [],
         session_focus: updates.session_focus ?? current?.session_focus ?? null,
+        skill_stage: updates.skill_stage ?? current?.skill_stage ?? null,
       };
       const saved = await upsertSurferProfile(merged);
       set({ profile: saved });

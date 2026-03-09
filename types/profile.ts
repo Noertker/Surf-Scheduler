@@ -1,3 +1,5 @@
+import { SkillStage } from '@/constants/progression';
+
 export type SurferLevel =
   | 'beginner'
   | 'developing'
@@ -44,5 +46,6 @@ export interface SurferProfile {
   strengths: string[];
   weaknesses: string[];
   session_focus: string | null;
+  skill_stage: SkillStage | null;
   created_at: string;
 }

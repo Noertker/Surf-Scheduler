@@ -107,6 +107,7 @@ function buildRequestBody(params: {
     mode: params.mode,
     profile: {
       level: profile.level,
+      skill_stage: profile.skill_stage,
       years_experience: profile.years_experience,
       stance: profile.stance,
       goals: profile.goals,

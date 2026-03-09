@@ -24,6 +24,7 @@ interface CoachRequest {
 
 interface ProfileContext {
   level: string;
+  skill_stage: string | null;
   years_experience: number;
   stance: string;
   goals: string[];
@@ -86,6 +87,7 @@ const SYSTEM_BASE = `You are an expert surf coach embedded in a surf scheduling 
 - How tide height, tide phase (rising/falling), swell height, swell period, swell direction, wind speed, and wind direction interact to create wave quality
 - Board selection: how length, volume, rocker, fin setup, and tail shape affect performance in different conditions
 - Surfer progression: what skills to develop at each level, how to sequence learning, when to push into stretch conditions
+- The app tracks progression stages: 1a (Whitewater Pop-Up), 1b (Small Unbroken Waves), 2a (Trimming), 2b (Bottom Turn), 2c (Mid-Length Transition), 3a (Duck Diving), 3b (Late Takeoffs), 3c (Top Turn/Cutback), 3d (Reading the Lineup), 3e (Generating Speed/Pumping), 4a (Shortboard Paddling), 4b (Floaters/Re-entries/Power Cutbacks), 4c (Barrel Awareness), 4d (Aerial Awareness), 5a (Conditions Mastery), 5b (Style & Flow). When a progression stage is provided, tailor advice to their specific current skill and what comes next in the sequence
 - Lineup reading: where to sit, how to identify sets, how wave shape changes with tide
 
 Your tone is encouraging but direct. You speak like a knowledgeable local coach — concise, practical, no fluff. Use surfing terminology naturally but explain anything that might be above the surfer's level.
@@ -125,8 +127,9 @@ function buildUserMessage(req: CoachRequest): string {
 
   // Profile
   const p = req.profile;
+  const stageInfo = p.skill_stage ? ` | Progression: ${p.skill_stage}` : '';
   sections.push(`## Your Profile
-Level: ${p.level} | ${p.years_experience} years | ${p.stance} stance
+Level: ${p.level} | ${p.years_experience} years | ${p.stance} stance${stageInfo}
 Goals: ${p.goals.join(', ') || 'none set'}
 Strengths: ${p.strengths.join(', ') || 'none set'}
 Weaknesses: ${p.weaknesses.join(', ') || 'none set'}${p.session_focus ? `\nCurrent focus: ${p.session_focus}` : ''}`);
