@@ -43,17 +43,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await authStorage.setItem(PROVIDER_REFRESH_KEY, session.provider_refresh_token);
       }
 
-      // On first sign-in, claim anonymous data BEFORE updating state
-      // so the AuthRefreshBridge re-fetch finds the claimed rows
-      if (event === 'SIGNED_IN' && session?.user) {
-        try {
-          await claimAnonymousData(session.user.id);
-        } catch (err) {
-          console.warn('Data migration failed:', err);
-        }
-      }
-
+      // Update state immediately so the UI reflects the login
       set({ session, user: session?.user ?? null });
+
+      // Claim anonymous data in the background (non-blocking)
+      if (event === 'SIGNED_IN' && session?.user) {
+        claimAnonymousData(session.user.id).catch((err) => {
+          console.warn('Data migration failed:', err);
+        });
+      }
     });
   },
 

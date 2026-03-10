@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Alert, Pressable, StyleSheet } from 'react-native';
 import { Text } from '@/components/shared/Text';
 import { SurfSession } from '@/types/session';
 import { syncSessionToCalendar } from '@/services/calendarSync';
@@ -7,6 +7,8 @@ import { useSessionStore } from '@/stores/useSessionStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
+import { isGCalAvailable, createGCalEvent } from '@/services/googleCalendar';
+import { supabase } from '@/services/supabase';
 
 interface Props {
   session: SurfSession;
@@ -36,10 +38,25 @@ export function CalendarSyncButton({ session }: Props) {
       if (syncing) return;
       setSyncing(true);
       try {
-        // Trigger a no-op update which will create the GCal event
-        await updateSession(session.id, { notes: session.notes });
+        const available = await isGCalAvailable();
+        if (!available) {
+          Alert.alert('Calendar Sync', 'Google Calendar token not available. Try signing out and back in with Google.');
+          setSyncing(false);
+          return;
+        }
+
+        const gcalEventId = await createGCalEvent(session);
+        // Persist the GCal event ID
+        await supabase
+          .from('surf_sessions')
+          .update({ gcal_event_id: gcalEventId })
+          .eq('id', session.id);
+        await updateSession(session.id, { gcal_event_id: gcalEventId });
+        Alert.alert('Calendar Sync', 'Session synced to Google Calendar!');
       } catch (err) {
-        console.error('Calendar sync failed:', err);
+        const msg = (err as Error).message ?? 'Unknown error';
+        console.error('Calendar sync failed:', msg);
+        Alert.alert('Calendar Sync Failed', msg);
       }
       setSyncing(false);
     };
