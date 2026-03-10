@@ -86,7 +86,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const redirectTo = Platform.OS === 'web'
         ? window.location.origin  // e.g. http://localhost:8081
-        : 'surfscheduler://auth/callback';
+        : 'kairosurf://auth/callback';
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -118,8 +118,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const params = new URLSearchParams(result.url.split('#')[1] ?? '');
             const access_token = params.get('access_token');
             const refresh_token = params.get('refresh_token');
+            const provider_token = params.get('provider_token');
+            const provider_refresh_token = params.get('provider_refresh_token');
+
             if (access_token && refresh_token) {
               await supabase.auth.setSession({ access_token, refresh_token });
+            }
+
+            // Store Google tokens for Calendar API access
+            // (setSession doesn't include provider tokens in the session)
+            if (provider_token) {
+              await authStorage.setItem(PROVIDER_TOKEN_KEY, provider_token);
+            }
+            if (provider_refresh_token) {
+              await authStorage.setItem(PROVIDER_REFRESH_KEY, decodeURIComponent(provider_refresh_token));
             }
           }
         }

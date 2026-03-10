@@ -32,7 +32,7 @@ export default function TabLayout() {
         },
         headerTintColor: colors.text,
         headerShown: true,
-        headerRight: () => <KairoWordmark height={18} />,
+        headerRight: () => <KairoWordmark height={36} />,
         headerRightContainerStyle: { paddingRight: 16 },
       }}>
       <Tabs.Screen
