@@ -6,15 +6,18 @@ import { getUserId } from '@/services/supabase';
 interface SettingsState {
   dayStartHour: number;
   dayEndHour: number;
+  expandedGroups: string[];
   loading: boolean;
   error: string | null;
   fetchSettings: () => Promise<void>;
   saveTimeWindow: (startHour: number, endHour: number) => Promise<void>;
+  toggleGroup: (groupId: string) => Promise<void>;
 }
 
-export const useSettingsStore = create<SettingsState>((set) => ({
+export const useSettingsStore = create<SettingsState>((set, get) => ({
   dayStartHour: DEFAULT_DAY_START,
   dayEndHour: DEFAULT_DAY_END,
+  expandedGroups: [],
   loading: false,
   error: null,
 
@@ -26,6 +29,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         set({
           dayStartHour: settings.day_start_hour,
           dayEndHour: settings.day_end_hour,
+          expandedGroups: settings.expanded_groups ?? [],
           loading: false,
         });
       } else {
@@ -44,8 +48,27 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         user_id: getUserId(),
         day_start_hour: finalStart,
         day_end_hour: finalEnd,
+        expanded_groups: get().expandedGroups,
       });
       set({ dayStartHour: finalStart, dayEndHour: finalEnd });
+    } catch (err) {
+      set({ error: (err as Error).message });
+    }
+  },
+
+  toggleGroup: async (groupId) => {
+    const current = get().expandedGroups;
+    const next = current.includes(groupId)
+      ? current.filter((id) => id !== groupId)
+      : [...current, groupId];
+    set({ expandedGroups: next });
+    try {
+      await upsertUserSettings({
+        user_id: getUserId(),
+        day_start_hour: get().dayStartHour,
+        day_end_hour: get().dayEndHour,
+        expanded_groups: next,
+      });
     } catch (err) {
       set({ error: (err as Error).message });
     }

@@ -1,7 +1,10 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SpotGroup } from '@/types/group';
 import { Spot } from '@/types/spot';
 import { fetchSpotGroups, fetchGroupSpots } from '@/services/spotGroups';
+
+const ACTIVE_GROUP_KEY = 'kairo_active_group';
 
 interface GroupState {
   groups: SpotGroup[];
@@ -25,9 +28,11 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     try {
       const groups = await fetchSpotGroups();
       set({ groups, loading: false });
-      // Auto-select first group if none selected
+      // Restore last-used group, or fall back to first group
       if (!get().activeGroupId && groups.length > 0) {
-        await get().setActiveGroup(groups[0].id);
+        const savedId = await AsyncStorage.getItem(ACTIVE_GROUP_KEY);
+        const restoredGroup = savedId && groups.find((g) => g.id === savedId);
+        await get().setActiveGroup(restoredGroup ? restoredGroup.id : groups[0].id);
       }
     } catch (err) {
       set({ error: (err as Error).message, loading: false });
@@ -36,6 +41,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
 
   setActiveGroup: async (groupId) => {
     set({ activeGroupId: groupId, loading: true });
+    AsyncStorage.setItem(ACTIVE_GROUP_KEY, groupId).catch(() => {});
     try {
       const spots = await fetchGroupSpots(groupId);
       set({ groupSpots: spots, loading: false });

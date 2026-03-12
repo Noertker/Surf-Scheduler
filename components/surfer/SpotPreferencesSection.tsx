@@ -9,11 +9,13 @@ import { View } from '@/components/shared/View';
 import { Text } from '@/components/shared/Text';
 import { SpotPreferenceEditor } from '@/components/spots/SpotPreferenceEditor';
 import { usePreferenceStore } from '@/stores/usePreferenceStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { fetchAllGroupsWithSpots } from '@/services/spotGroups';
 import { SpotGroup } from '@/types/group';
 import { Spot } from '@/types/spot';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
+
 
 interface GroupWithSpots {
   group: SpotGroup;
@@ -24,12 +26,12 @@ export function SpotPreferencesSection() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [groupsData, setGroupsData] = useState<GroupWithSpots[]>([]);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [editingSpot, setEditingSpot] = useState<Spot | null>(null);
   const [loading, setLoading] = useState(true);
 
   const { fetchPreferences, getPreferenceForSpot, savePreference } =
     usePreferenceStore();
+  const { expandedGroups, toggleGroup, fetchSettings } = useSettingsStore();
 
   useEffect(() => {
     loadData();
@@ -39,23 +41,14 @@ export function SpotPreferencesSection() {
     setLoading(true);
     try {
       await fetchPreferences();
+      await fetchSettings();
       const data = await fetchAllGroupsWithSpots();
       setGroupsData(data);
-      setExpandedGroups(new Set(data.map((d) => d.group.id)));
     } catch (err) {
       console.error('Failed to load spots:', err);
     }
     setLoading(false);
   }
-
-  const toggleGroup = (groupId: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(groupId)) next.delete(groupId);
-      else next.add(groupId);
-      return next;
-    });
-  };
 
   const handleToggleEnabled = async (spot: Spot) => {
     const pref = getPreferenceForSpot(spot.id);
@@ -77,16 +70,19 @@ export function SpotPreferencesSection() {
   return (
     <View>
       {groupsData.map(({ group, spots }) => {
-        const expanded = expandedGroups.has(group.id);
+        const expanded = expandedGroups.includes(group.id);
         return (
           <View key={group.id} style={styles.groupContainer}>
             <Pressable
               style={styles.groupHeader}
               onPress={() => toggleGroup(group.id)}
             >
-              <Text style={styles.groupArrow}>
-                {expanded ? '\u25BC' : '\u25B6'}
-              </Text>
+              <Switch
+                value={expanded}
+                onValueChange={() => toggleGroup(group.id)}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                style={styles.groupCheckbox}
+              />
               <Text style={styles.groupName}>{group.name}</Text>
               <Text style={styles.groupCount}>{spots.length} spots</Text>
             </Pressable>
@@ -150,10 +146,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  groupArrow: {
-    fontSize: 12,
+  groupCheckbox: {
+    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }],
     marginRight: 8,
-    color: colors.textDim,
   },
   groupName: {
     fontSize: 16,

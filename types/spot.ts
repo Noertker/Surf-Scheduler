@@ -22,4 +22,5 @@ export interface UserSettings {
   user_id: string | null;
   day_start_hour: number;
   day_end_hour: number;
+  expanded_groups: string[];
 }

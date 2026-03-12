@@ -24,7 +24,7 @@ export async function fetchGroupSpots(groupId: string): Promise<Spot[]> {
   return (data ?? [])
     .map((row: any) => row.spots)
     .filter(Boolean)
-    .sort((a: Spot, b: Spot) => a.name.localeCompare(b.name));
+    .sort((a: Spot, b: Spot) => b.lat - a.lat);
 }
 
 /**
@@ -51,6 +51,6 @@ export async function fetchAllGroupsWithSpots(): Promise<
     spots: (g.spot_group_members ?? [])
       .map((m: any) => m.spots)
       .filter(Boolean)
-      .sort((a: Spot, b: Spot) => a.name.localeCompare(b.name)),
+      .sort((a: Spot, b: Spot) => b.lat - a.lat),
   }));
 }
