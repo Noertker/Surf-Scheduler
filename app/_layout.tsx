@@ -8,7 +8,7 @@ import 'react-native-reanimated';
 
 WebBrowser.maybeCompleteAuthSession();
 
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { AuthScreen } from '@/components/auth/AuthScreen';
@@ -17,6 +17,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore';
 import { usePreferenceStore } from '@/stores/usePreferenceStore';
 import { useSurfboardStore } from '@/stores/useSurfboardStore';
 import { useProfileStore } from '@/stores/useProfileStore';
+import { useThemeStore } from '@/hooks/useThemeStore';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -35,9 +36,10 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  // Initialize auth on mount
+  // Initialize auth and theme on mount
   useEffect(() => {
     useAuthStore.getState().initialize();
+    useThemeStore.getState().initialize();
   }, []);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
@@ -87,12 +89,12 @@ function RootLayoutNav() {
       ) : !user ? (
         <AuthScreen />
       ) : (
-        <>
+        <View style={{ flex: 1 }}>
           <AuthRefreshBridge />
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           </Stack>
-        </>
+        </View>
       )}
     </ThemeProvider>
   );

@@ -1,26 +1,29 @@
 import { useRef, useState, useMemo } from 'react';
-import { PanResponder, GestureResponderEvent } from 'react-native';
+import { PanResponder, GestureResponderEvent, PanResponderGestureState } from 'react-native';
 
 /**
  * Shared hook for touch-and-drag crosshair on SVG charts.
  * Returns panHandlers to spread on a wrapper View, plus the active touch X
  * and the index of the nearest data point.
  *
- * @param dataXPositions - array of pixel X positions for each data point (must be sorted ascending)
- * @param paddingLeft - left padding of the chart area
- * @param paddingRight - right edge of the chart area (chartWidth - padding.right)
+ * Uses a horizontal-bias gesture check so that horizontal scrubbing claims
+ * the touch from a parent ScrollView/FlatList, while vertical swipes
+ * pass through to allow scrolling.
  */
+const EMPTY_PAN_HANDLERS = {};
+
 export function useChartTouch(
   dataXPositions: number[],
   paddingLeft: number,
-  paddingRight: number
+  paddingRight: number,
+  enabled: boolean = true,
 ) {
   const [touchX, setTouchX] = useState<number | null>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const claimed = useRef(false);
 
   const findNearest = (x: number) => {
     if (dataXPositions.length === 0) return -1;
-    // Clamp to chart area
     const clamped = Math.max(paddingLeft, Math.min(paddingRight, x));
     let bestIdx = 0;
     let bestDist = Math.abs(dataXPositions[0] - clamped);
@@ -40,24 +43,41 @@ export function useChartTouch(
     setActiveIndex(findNearest(x));
   };
 
+  const isHorizontalGesture = (_: GestureResponderEvent, gs: PanResponderGestureState) =>
+    Math.abs(gs.dx) > 4 && Math.abs(gs.dx) > Math.abs(gs.dy * 1.5);
+
   const panResponder = useMemo(
     () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: handleTouch,
-        onPanResponderMove: handleTouch,
-        onPanResponderRelease: () => {
-          setTouchX(null);
-          setActiveIndex(null);
-        },
-        onPanResponderTerminate: () => {
-          setTouchX(null);
-          setActiveIndex(null);
-        },
-      }),
-    [dataXPositions, paddingLeft, paddingRight]
+      enabled
+        ? PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: isHorizontalGesture,
+            onMoveShouldSetPanResponderCapture: isHorizontalGesture,
+            onPanResponderGrant: (evt) => {
+              claimed.current = true;
+              handleTouch(evt);
+            },
+            onPanResponderMove: handleTouch,
+            // Refuse to release the gesture once we've claimed it
+            onPanResponderTerminationRequest: () => !claimed.current,
+            onPanResponderRelease: () => {
+              claimed.current = false;
+              setTouchX(null);
+              setActiveIndex(null);
+            },
+            onPanResponderTerminate: () => {
+              claimed.current = false;
+              setTouchX(null);
+              setActiveIndex(null);
+            },
+          })
+        : null,
+    [dataXPositions, paddingLeft, paddingRight, enabled]
   );
 
-  return { panHandlers: panResponder.panHandlers, touchX, activeIndex };
+  return {
+    panHandlers: panResponder ? panResponder.panHandlers : EMPTY_PAN_HANDLERS,
+    touchX: enabled ? touchX : null,
+    activeIndex: enabled ? activeIndex : null,
+  };
 }

@@ -114,43 +114,40 @@ export default function SessionsScreen() {
               card to schedule a surf session.
             </Text>
           </View>
-        ) : (
-          <>
-            {upcoming.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Upcoming</Text>
-                  {forecastLoading && (
-                    <ActivityIndicator size="small" style={{ marginLeft: 8 }} />
-                  )}
-                </View>
-                {upcoming.map((s) => (
-                  <SessionCard
-                    key={s.id}
-                    session={s}
-                    forecast={forecasts.get(s.id)}
-                    onDelete={() => handleDelete(s.id, s.spot_name)}
-                    onUpdate={updateSession}
-                  />
-                ))}
-              </View>
-            )}
-            {past.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Past</Text>
-                {past.map((s) => (
-                  <SessionCard
-                    key={s.id}
-                    session={s}
-                    onDelete={() => handleDelete(s.id, s.spot_name)}
-                    onUpdate={updateSession}
-                    onLogResults={() => setLoggingSession(s)}
-                    isPast
-                  />
-                ))}
-              </View>
-            )}
-          </>
+        ) : null}
+        {upcoming.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Upcoming</Text>
+              {forecastLoading && (
+                <ActivityIndicator size="small" style={{ marginLeft: 8 }} />
+              )}
+            </View>
+            {upcoming.map((s) => (
+              <SessionCard
+                key={s.id}
+                session={s}
+                forecast={forecasts.get(s.id)}
+                onDelete={() => handleDelete(s.id, s.spot_name)}
+                onUpdate={updateSession}
+              />
+            ))}
+          </View>
+        )}
+        {past.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Past</Text>
+            {past.map((s) => (
+              <SessionCard
+                key={s.id}
+                session={s}
+                onDelete={() => handleDelete(s.id, s.spot_name)}
+                onUpdate={updateSession}
+                onLogResults={() => setLoggingSession(s)}
+                isPast
+              />
+            ))}
+          </View>
         )}
       </ScrollView>
 

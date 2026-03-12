@@ -15,6 +15,9 @@ interface Props {
   dayStartHour?: number;
   dayEndHour?: number;
   height?: number;
+  interactive?: boolean;
+  activeTime?: Date | null;
+  onTimeChange?: (time: Date | null) => void;
 }
 
 const PADDING = { top: 16, right: 16, bottom: 24, left: 36 };
@@ -29,6 +32,9 @@ export function SwellChart({
   dayStartHour = DEFAULT_DAY_START,
   dayEndHour = DEFAULT_DAY_END,
   height = 160,
+  interactive = true,
+  activeTime,
+  onTimeChange,
 }: Props) {
   const colors = useColors();
   const chartWidth = Dimensions.get('window').width - 32;
@@ -96,14 +102,34 @@ export function SwellChart({
   const { panHandlers, touchX, activeIndex } = useChartTouch(
     dataXPositions,
     PADDING.left,
-    chartWidth - PADDING.right
+    chartWidth - PADDING.right,
+    interactive,
   );
+
+  const localActiveReading = activeIndex != null ? filtered[activeIndex] : null;
+  React.useEffect(() => {
+    if (!onTimeChange) return;
+    onTimeChange(localActiveReading?.timestamp ?? null);
+  }, [localActiveReading?.timestamp?.getTime()]);
+
+  const resolvedReading = useMemo(() => {
+    if (activeTime && xScale && filtered.length > 0) {
+      let bestIdx = 0;
+      let bestDist = Math.abs(filtered[0].timestamp.getTime() - activeTime.getTime());
+      for (let i = 1; i < filtered.length; i++) {
+        const dist = Math.abs(filtered[i].timestamp.getTime() - activeTime.getTime());
+        if (dist < bestDist) { bestDist = dist; bestIdx = i; }
+      }
+      return filtered[bestIdx];
+    }
+    return localActiveReading;
+  }, [activeTime, localActiveReading, filtered]);
+
+  const showCrosshair = resolvedReading != null && (touchX != null || activeTime != null);
 
   if (!heightPath || !xScale || !yScale) {
     return null;
   }
-
-  const activeReading = activeIndex != null ? filtered[activeIndex] : null;
 
   return (
     <View style={{ alignItems: 'center' }} {...panHandlers}>
@@ -154,41 +180,45 @@ export function SwellChart({
         <Path d={heightPath} fill="none" stroke={colors.chartSwell} strokeWidth={2} />
 
         {/* Touch crosshair */}
-        {touchX != null && activeReading && (
+        {showCrosshair && resolvedReading && (
           <>
             <Line
-              x1={dataXPositions[activeIndex!]}
+              x1={xScale(resolvedReading.timestamp)}
               y1={PADDING.top}
-              x2={dataXPositions[activeIndex!]}
+              x2={xScale(resolvedReading.timestamp)}
               y2={height - PADDING.bottom}
               stroke={colors.crosshairStroke}
               strokeWidth={1}
               strokeDasharray="4,3"
             />
             <Circle
-              cx={dataXPositions[activeIndex!]}
-              cy={yScale(activeReading.heightFt)}
+              cx={xScale(resolvedReading.timestamp)}
+              cy={yScale(resolvedReading.heightFt)}
               r={4}
               fill={colors.chartSwell}
             />
-            {/* Label background */}
-            <Rect
-              x={clampLabelX(dataXPositions[activeIndex!] - 70, PADDING.left, chartWidth - PADDING.right - 140)}
-              y={0}
-              width={140}
-              height={18}
-              rx={4}
-              fill={colors.chartLabelBg}
-            />
-            <SvgText
-              x={clampLabelX(dataXPositions[activeIndex!], PADDING.left + 70, chartWidth - PADDING.right - 70)}
-              y={13}
-              fontSize={11}
-              fill={colors.crosshairLabelText}
-              textAnchor="middle"
-              fontWeight="600">
-              {activeReading.heightFt}ft @ {Math.round(activeReading.periodS)}s {degToCompass(activeReading.directionDeg)}
-            </SvgText>
+            {/* Label — only when no external sync */}
+            {!activeTime && (
+              <>
+                <Rect
+                  x={clampLabelX(xScale(resolvedReading.timestamp) - 70, PADDING.left, chartWidth - PADDING.right - 140)}
+                  y={0}
+                  width={140}
+                  height={18}
+                  rx={4}
+                  fill={colors.chartLabelBg}
+                />
+                <SvgText
+                  x={clampLabelX(xScale(resolvedReading.timestamp), PADDING.left + 70, chartWidth - PADDING.right - 70)}
+                  y={13}
+                  fontSize={11}
+                  fill={colors.crosshairLabelText}
+                  textAnchor="middle"
+                  fontWeight="600">
+                  {resolvedReading.heightFt}ft @ {Math.round(resolvedReading.periodS)}s {degToCompass(resolvedReading.directionDeg)}
+                </SvgText>
+              </>
+            )}
           </>
         )}
       </Svg>

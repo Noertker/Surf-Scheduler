@@ -15,6 +15,9 @@ interface Props {
   dayStartHour?: number;
   dayEndHour?: number;
   height?: number;
+  interactive?: boolean;
+  activeTime?: Date | null;
+  onTimeChange?: (time: Date | null) => void;
 }
 
 const PADDING = { top: 16, right: 16, bottom: 24, left: 36 };
@@ -29,6 +32,9 @@ export function WindChart({
   dayStartHour = DEFAULT_DAY_START,
   dayEndHour = DEFAULT_DAY_END,
   height = 140,
+  interactive = true,
+  activeTime,
+  onTimeChange,
 }: Props) {
   const colors = useColors();
   const chartWidth = Dimensions.get('window').width - 32;
@@ -99,14 +105,34 @@ export function WindChart({
   const { panHandlers, touchX, activeIndex } = useChartTouch(
     dataXPositions,
     PADDING.left,
-    chartWidth - PADDING.right
+    chartWidth - PADDING.right,
+    interactive,
   );
+
+  const localActiveReading = activeIndex != null ? filtered[activeIndex] : null;
+  React.useEffect(() => {
+    if (!onTimeChange) return;
+    onTimeChange(localActiveReading?.timestamp ?? null);
+  }, [localActiveReading?.timestamp?.getTime()]);
+
+  const resolvedReading = useMemo(() => {
+    if (activeTime && xScale && filtered.length > 0) {
+      let bestIdx = 0;
+      let bestDist = Math.abs(filtered[0].timestamp.getTime() - activeTime.getTime());
+      for (let i = 1; i < filtered.length; i++) {
+        const dist = Math.abs(filtered[i].timestamp.getTime() - activeTime.getTime());
+        if (dist < bestDist) { bestDist = dist; bestIdx = i; }
+      }
+      return filtered[bestIdx];
+    }
+    return localActiveReading;
+  }, [activeTime, localActiveReading, filtered]);
+
+  const showCrosshair = resolvedReading != null && (touchX != null || activeTime != null);
 
   if (!speedPath || !xScale || !yScale) {
     return null;
   }
-
-  const activeReading = activeIndex != null ? filtered[activeIndex] : null;
 
   return (
     <View style={{ alignItems: 'center' }} {...panHandlers}>
@@ -157,47 +183,51 @@ export function WindChart({
         <Path d={speedPath} fill="none" stroke={colors.chartWind} strokeWidth={2} />
 
         {/* Touch crosshair */}
-        {touchX != null && activeReading && (
+        {showCrosshair && resolvedReading && (
           <>
             <Line
-              x1={dataXPositions[activeIndex!]}
+              x1={xScale(resolvedReading.timestamp)}
               y1={PADDING.top}
-              x2={dataXPositions[activeIndex!]}
+              x2={xScale(resolvedReading.timestamp)}
               y2={height - PADDING.bottom}
               stroke={colors.crosshairStroke}
               strokeWidth={1}
               strokeDasharray="4,3"
             />
             <Circle
-              cx={dataXPositions[activeIndex!]}
-              cy={yScale(activeReading.speedMph)}
+              cx={xScale(resolvedReading.timestamp)}
+              cy={yScale(resolvedReading.speedMph)}
               r={4}
               fill={colors.chartWind}
             />
             <Circle
-              cx={dataXPositions[activeIndex!]}
-              cy={yScale(activeReading.gustsMph)}
+              cx={xScale(resolvedReading.timestamp)}
+              cy={yScale(resolvedReading.gustsMph)}
               r={3}
               fill="rgba(248, 113, 113, 0.5)"
             />
-            {/* Label background */}
-            <Rect
-              x={clampLabelX(dataXPositions[activeIndex!] - 62, PADDING.left, chartWidth - PADDING.right - 124)}
-              y={0}
-              width={124}
-              height={18}
-              rx={4}
-              fill={colors.chartLabelBg}
-            />
-            <SvgText
-              x={clampLabelX(dataXPositions[activeIndex!], PADDING.left + 62, chartWidth - PADDING.right - 62)}
-              y={13}
-              fontSize={11}
-              fill={colors.crosshairLabelText}
-              textAnchor="middle"
-              fontWeight="600">
-              {Math.round(activeReading.speedMph)}mph {degToCompass(activeReading.directionDeg)} g{Math.round(activeReading.gustsMph)}
-            </SvgText>
+            {/* Label — only when no external sync */}
+            {!activeTime && (
+              <>
+                <Rect
+                  x={clampLabelX(xScale(resolvedReading.timestamp) - 62, PADDING.left, chartWidth - PADDING.right - 124)}
+                  y={0}
+                  width={124}
+                  height={18}
+                  rx={4}
+                  fill={colors.chartLabelBg}
+                />
+                <SvgText
+                  x={clampLabelX(xScale(resolvedReading.timestamp), PADDING.left + 62, chartWidth - PADDING.right - 62)}
+                  y={13}
+                  fontSize={11}
+                  fill={colors.crosshairLabelText}
+                  textAnchor="middle"
+                  fontWeight="600">
+                  {Math.round(resolvedReading.speedMph)}mph {degToCompass(resolvedReading.directionDeg)} g{Math.round(resolvedReading.gustsMph)}
+                </SvgText>
+              </>
+            )}
           </>
         )}
       </Svg>

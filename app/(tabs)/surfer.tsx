@@ -1,25 +1,24 @@
+import { Text } from '@/components/shared/Text';
+import { View } from '@/components/shared/View';
+import { CoachingSection } from '@/components/surfer/CoachingSection';
+import { ProfileSection } from '@/components/surfer/ProfileSection';
+import { ProgressionSection } from '@/components/surfer/ProgressionSection';
+import { QuiverSection } from '@/components/surfer/QuiverSection';
+import { SpotPreferencesSection } from '@/components/surfer/SpotPreferencesSection';
+import { ThemeColors } from '@/constants/theme';
+import { useColors } from '@/hooks/useColors';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
-import { View } from '@/components/shared/View';
-import { Text } from '@/components/shared/Text';
-import { SpotPreferencesSection } from '@/components/surfer/SpotPreferencesSection';
-import { QuiverSection } from '@/components/surfer/QuiverSection';
-import { AccountSection } from '@/components/surfer/AccountSection';
-import { ProfileSection } from '@/components/surfer/ProfileSection';
-import { CoachingSection } from '@/components/surfer/CoachingSection';
-import { ProgressionSection } from '@/components/surfer/ProgressionSection';
-import { useColors } from '@/hooks/useColors';
-import { ThemeColors } from '@/constants/theme';
 
-type Section = 'profile' | 'progression' | 'spots' | 'quiver' | 'account' | 'coaching';
+type Section = 'profile' | 'progression' | 'spots' | 'quiver' | 'coaching';
 
-const MENU_ITEMS: { key: Section; label: string; icon: string }[] = [
-  { key: 'profile', label: 'Profile', icon: '\u{1F3C4}\u{200D}\u{2642}\u{FE0F}' },
-  { key: 'progression', label: 'Progression', icon: '\u{1F4C8}' },
-  { key: 'spots', label: 'Surf Spots', icon: '\u{1F30A}' },
-  { key: 'quiver', label: 'Quiver', icon: '\u{1F6F9}' },
-  { key: 'account', label: 'Account', icon: '\u{1F464}' },
-  { key: 'coaching', label: 'Coaching', icon: '\u{1F9E0}' },
+const MENU_ITEMS: { key: Section; label: string; renderIcon: (size: number, color: string) => React.ReactNode }[] = [
+  { key: 'spots', label: 'Breaks', renderIcon: (s, c) => <Ionicons name="water-outline" size={s} color={c} /> },
+  { key: 'profile', label: 'Profile', renderIcon: (s, c) => <Ionicons name="person-outline" size={s} color={c} /> },
+  { key: 'progression', label: 'Progression', renderIcon: (s, c) => <Ionicons name="trending-up-outline" size={s} color={c} /> },
+  { key: 'quiver', label: 'Quiver', renderIcon: (s, c) => <MaterialIcons name="surfing" size={s} color={c} /> },
+  { key: 'coaching', label: 'Coaching', renderIcon: (s, c) => <Ionicons name="bulb-outline" size={s} color={c} /> },
 ];
 
 export default function SurferScreen() {
@@ -32,15 +31,13 @@ export default function SurferScreen() {
   const renderContent = () => {
     switch (active) {
       case 'profile':
-        return <ProfileSection />;
+        return <ProfileSection onNavigateToProgression={() => setActive('progression')} />;
       case 'progression':
         return <ProgressionSection />;
       case 'spots':
         return <SpotPreferencesSection />;
       case 'quiver':
         return <QuiverSection />;
-      case 'account':
-        return <AccountSection />;
       case 'coaching':
         return <CoachingSection />;
     }
@@ -57,7 +54,7 @@ export default function SurferScreen() {
               onPress={() => setActive(item.key)}
               style={[styles.menuItem, active === item.key && styles.menuItemActive]}
             >
-              <Text style={styles.menuIcon}>{item.icon}</Text>
+              {item.renderIcon(18, active === item.key ? colors.primary : colors.textTertiary)}
               <Text style={[styles.menuLabel, active === item.key && styles.menuLabelActive]}>
                 {item.label}
               </Text>
@@ -81,7 +78,7 @@ export default function SurferScreen() {
             onPress={() => setActive(item.key)}
             style={[styles.tab, active === item.key && styles.tabActive]}
           >
-            <Text style={styles.tabIcon}>{item.icon}</Text>
+            {item.renderIcon(16, active === item.key ? colors.primary : colors.textTertiary)}
             <Text style={[styles.tabLabel, active === item.key && styles.tabLabelActive]}>
               {item.label}
             </Text>
@@ -122,7 +119,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRightColor: colors.primary,
   },
   menuIcon: {
-    fontSize: 18,
+    width: 20,
+    textAlign: 'center',
   },
   menuLabel: {
     fontSize: 14,
@@ -162,7 +160,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderBottomColor: colors.primary,
   },
   tabIcon: {
-    fontSize: 16,
+    width: 18,
+    textAlign: 'center',
   },
   tabLabel: {
     fontSize: 13,

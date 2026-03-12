@@ -1,8 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Text } from 'react-native';
-
-import { DashboardHeader } from '@/components/calendar/DashboardHeader';
 import { KairoWordmark } from '@/components/shared/KairoWordmark';
 import { useColors } from '@/hooks/useColors';
 
@@ -32,35 +30,30 @@ export default function TabLayout() {
         },
         headerTintColor: colors.text,
         headerShown: true,
-        headerRight: () => <KairoWordmark height={36} />,
-        headerRightContainerStyle: { paddingRight: 16 },
+        headerTitle: () => <KairoWordmark height={28} />,
+        headerTitleAlign: 'center',
       }}>
       <Tabs.Screen
         name="surfer"
         options={{
-          title: 'Surfer',
-          headerTitleStyle: { color: colors.text, fontWeight: '700', letterSpacing: 1 },
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 22, color }}>🏄</Text>
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
-          headerTitle: () => <DashboardHeader />,
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 22, color }}>📅</Text>
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="sessions"
         options={{
-          title: 'Sessions',
-          headerTitleStyle: { color: colors.text, fontWeight: '700', letterSpacing: 1 },
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 22, color }}>📋</Text>
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="list-outline" size={size} color={color} />
           ),
         }}
       />

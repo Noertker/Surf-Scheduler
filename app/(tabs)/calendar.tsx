@@ -1,10 +1,13 @@
 import { CalendarGrid } from '@/components/calendar/CalendarGrid';
+import { CalendarSubHeader } from '@/components/calendar/CalendarSubHeader';
+import { DayCard } from '@/components/calendar/DayCard';
 import { DayDetail } from '@/components/calendar/DayDetail';
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
 import { fetchSwellData, fetchWindData } from '@/services/openMeteo';
+import { useThemeStore } from '@/hooks/useThemeStore';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { usePreferenceStore } from '@/stores/usePreferenceStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
@@ -17,14 +20,18 @@ import {
   groupPredictionsByDay,
   localDateKey,
 } from '@/utils/tideWindows';
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, ViewToken } from 'react-native';
+
+interface TimelineDay {
+  date: Date;
+  dateKey: string;
+}
 
 export default function DashboardScreen() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { groups, activeGroupId, groupSpots, loading, fetchGroups, setActiveGroup } =
-    useGroupStore();
+  const { groupSpots, loading, fetchGroups } = useGroupStore();
   const { preferences } = usePreferenceStore();
   const { dayStartHour, dayEndHour } = useSettingsStore();
   const {
@@ -35,19 +42,18 @@ export default function DashboardScreen() {
     fetchMonthlyTides,
   } = useTideStore();
 
+  const viewMode = useThemeStore((s) => s.calendarViewMode);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [highlightedDate, setHighlightedDate] = useState(new Date());
   const [wind, setWind] = useState<WindReading[]>([]);
   const [swell, setSwell] = useState<SwellReading[]>([]);
 
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
-
   const nextMonth = month === 11 ? 0 : month + 1;
   const nextYear = month === 11 ? year + 1 : year;
 
-  // Groups are not user-scoped — safe to fetch on mount.
-  // Preferences and settings are fetched by AuthRefreshBridge after auth is ready.
   useEffect(() => {
     fetchGroups();
   }, []);
@@ -60,7 +66,7 @@ export default function DashboardScreen() {
       fetchWindData(spot.lat, spot.lng, 7).then(setWind).catch(() => setWind([]));
       fetchSwellData(spot.lat, spot.lng, 7).then(setSwell).catch(() => setSwell([]));
     }
-  }, [activeGroupId, groupSpots]);
+  }, [groupSpots]);
 
   const dayWindows = useMemo(() => {
     const map = new Map<string, TideWindow[]>();
@@ -85,17 +91,38 @@ export default function DashboardScreen() {
     return map;
   }, [monthlyPredictions, groupSpots, preferences, dayStartHour, dayEndHour, wind, swell]);
 
+  // Pre-compute day maps at page level for both timeline and modal
+  const dayMap = useMemo(
+    () => groupPredictionsByDay(monthlyPredictions),
+    [monthlyPredictions]
+  );
+  const hiLoMap = useMemo(
+    () => groupPredictionsByDay(monthlyHiLo),
+    [monthlyHiLo]
+  );
+
+  // Timeline: 60 days from today
+  const timelineDays = useMemo(() => {
+    const days: TimelineDay[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 60; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + i);
+      days.push({ date: d, dateKey: localDateKey(d) });
+    }
+    return days;
+  }, []);
+
   const selectedDayData = useMemo(() => {
     if (!selectedDate) return { predictions: [], hiLo: [], windows: [] };
     const key = localDateKey(selectedDate);
-    const dayMap = groupPredictionsByDay(monthlyPredictions);
-    const hiLoMap = groupPredictionsByDay(monthlyHiLo);
     return {
       predictions: dayMap.get(key) ?? [],
       hiLo: hiLoMap.get(key) ?? [],
       windows: dayWindows.get(key) ?? [],
     };
-  }, [selectedDate, monthlyPredictions, monthlyHiLo, dayWindows]);
+  }, [selectedDate, dayMap, hiLoMap, dayWindows]);
 
   const representativePref = useMemo(() => {
     if (groupSpots.length === 0) return undefined;
@@ -114,6 +141,38 @@ export default function DashboardScreen() {
   const monthName2 = new Date(nextYear, nextMonth, 1).toLocaleString('default', { month: 'long' });
   const hasContent = spotsWithPrefs.length > 0 && !monthlyLoading;
 
+  // Track which day is currently visible in the timeline
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      if (viewableItems.length > 0 && viewableItems[0].item) {
+        setHighlightedDate((viewableItems[0].item as TimelineDay).date);
+      }
+    },
+    []
+  );
+
+  const renderTimelineItem = useCallback(
+    ({ item }: { item: TimelineDay }) => (
+      <DayCard
+        date={item.date}
+        predictions={dayMap.get(item.dateKey) ?? []}
+        hiLo={hiLoMap.get(item.dateKey) ?? []}
+        windows={dayWindows.get(item.dateKey) ?? []}
+        wind={wind}
+        swell={swell}
+        tideMin={representativePref?.tide_min_ft}
+        tideMax={representativePref?.tide_max_ft}
+        dayStartHour={dayStartHour}
+        dayEndHour={dayEndHour}
+        compact
+      />
+    ),
+    [dayMap, hiLoMap, dayWindows, wind, swell, representativePref, dayStartHour, dayEndHour]
+  );
+
+  const keyExtractor = useCallback((item: TimelineDay) => item.dateKey, []);
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -122,55 +181,101 @@ export default function DashboardScreen() {
     );
   }
 
+  const subHeader = (
+    <CalendarSubHeader highlightedDate={highlightedDate} />
+  );
+
+  // Error / empty-prefs banners shown inside FlatList/ScrollView header
+  const statusBanners = (
+    <View style={{ backgroundColor: colors.bg }}>
+      {tideError ? (
+        <Pressable
+          style={styles.errorBanner}
+          onPress={() => {
+            const stationId = groupSpots[0]?.noaa_station_id;
+            if (stationId) fetchMonthlyTides(stationId);
+          }}>
+          <Text style={styles.errorText}>
+            Failed to load tides: {tideError} — Tap to retry
+          </Text>
+        </Pressable>
+      ) : null}
+      {spotsWithPrefs.length === 0 && !monthlyLoading ? (
+        <View style={styles.prefsHint}>
+          <Text style={styles.prefsHintText}>
+            No tide preferences set — go to Surfer tab to enable spots
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
+
+  if (viewMode === 'timeline') {
+    const timelineHeader = (
+      <View style={{ backgroundColor: colors.bg }}>
+        {subHeader}
+        {statusBanners}
+      </View>
+    );
+
+    return (
+      <View style={styles.container}>
+        {monthlyLoading && monthlyPredictions.length === 0 ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : (
+          <FlatList
+            data={timelineDays}
+            keyExtractor={keyExtractor}
+            renderItem={renderTimelineItem}
+            ListHeaderComponent={timelineHeader}
+            stickyHeaderIndices={[0]}
+            initialNumToRender={3}
+            maxToRenderPerBatch={3}
+            windowSize={5}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
+          />
+        )}
+      </View>
+    );
+  }
+
+  // Grid mode
   return (
     <View style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        stickyHeaderIndices={hasContent ? [0, 2] : undefined}
+        stickyHeaderIndices={[0]}
       >
-        {tideError && (
-          <Pressable
-            style={styles.errorBanner}
-            onPress={() => {
-              const stationId = groupSpots[0]?.noaa_station_id;
-              if (stationId) fetchMonthlyTides(stationId);
-            }}>
-            <Text style={styles.errorText}>
-              Failed to load tides: {tideError} — Tap to retry
-            </Text>
-          </Pressable>
-        )}
-        {monthlyLoading ? (
-          <ActivityIndicator style={{ marginTop: 40 }} size="large" color={colors.primary} />
-        ) : spotsWithPrefs.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>{'\u301C'}</Text>
-            <Text style={styles.emptyTitle}>NO PREFERENCES SET</Text>
-            <Text style={styles.emptyHint}>
-              Go to the Surfer tab, expand a region, and toggle spots on. Set your preferred tide range to see windows here.
-            </Text>
+        {subHeader}
+        {statusBanners}
+        {hasContent && (
+          <View style={styles.monthHeader}>
+            <Text style={styles.monthTitle}>{monthName1.toUpperCase()} {year}</Text>
           </View>
-        ) : (
-          <>
-            <View style={styles.monthHeader}>
-              <Text style={styles.monthTitle}>{monthName1.toUpperCase()} {year}</Text>
-            </View>
-            <CalendarGrid
-              year={year}
-              month={month}
-              dayWindows={dayWindows}
-              onDayPress={setSelectedDate}
-            />
-            <View style={styles.monthHeader}>
-              <Text style={styles.monthTitle}>{monthName2.toUpperCase()} {nextYear}</Text>
-            </View>
-            <CalendarGrid
-              year={nextYear}
-              month={nextMonth}
-              dayWindows={dayWindows}
-              onDayPress={setSelectedDate}
-            />
-          </>
+        )}
+        {hasContent && (
+          <CalendarGrid
+            year={year}
+            month={month}
+            dayWindows={dayWindows}
+            onDayPress={setSelectedDate}
+          />
+        )}
+        {hasContent && (
+          <View style={styles.monthHeader}>
+            <Text style={styles.monthTitle}>{monthName2.toUpperCase()} {nextYear}</Text>
+          </View>
+        )}
+        {hasContent && (
+          <CalendarGrid
+            year={nextYear}
+            month={nextMonth}
+            dayWindows={dayWindows}
+            onDayPress={setSelectedDate}
+          />
         )}
       </ScrollView>
 
@@ -234,4 +339,16 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderColor: 'rgba(248, 113, 113, 0.2)',
   },
   errorText: { fontSize: 13, color: colors.error, textAlign: 'center' },
+  prefsHint: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: colors.cardAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  prefsHintText: {
+    fontSize: 12,
+    color: colors.textDim,
+    textAlign: 'center',
+  },
 });

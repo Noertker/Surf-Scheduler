@@ -171,7 +171,7 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResult
         {session.completed && (
           <View style={styles.resultsRow}>
             <Text style={styles.resultStars}>
-              {'\u2605'.repeat(session.rating ?? 0)}{'\u2606'.repeat(5 - (session.rating ?? 0))}
+              {'\u2605'.repeat(Math.round((session.rating ?? 0) / 2))}{'\u2606'.repeat(5 - Math.round((session.rating ?? 0) / 2))}
             </Text>
             {session.wave_type && (
               <Text style={styles.resultTag}>{session.wave_type}</Text>

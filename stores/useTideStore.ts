@@ -67,14 +67,33 @@ export const useTideStore = create<TideState>((set) => ({
       const now = new Date();
       now.setHours(0, 0, 0, 0);
 
-      const end = new Date(now);
-      end.setDate(end.getDate() + 60);
+      // Phase 1: Fetch first 7 days quickly so UI renders fast
+      const phase1End = new Date(now);
+      phase1End.setDate(phase1End.getDate() + 7);
 
-      const [monthlyPredictions, monthlyHiLo] = await Promise.all([
-        fetchWithFallback(stationId, now, end, '6'),
-        fetchWithFallback(stationId, now, end, 'hilo'),
+      const [first7Predictions, first7HiLo] = await Promise.all([
+        fetchWithFallback(stationId, now, phase1End, '6'),
+        fetchWithFallback(stationId, now, phase1End, 'hilo'),
       ]);
-      set({ monthlyPredictions, monthlyHiLo, monthlyLoading: false, error: null });
+      set({
+        monthlyPredictions: first7Predictions,
+        monthlyHiLo: first7HiLo,
+        monthlyLoading: false,
+        error: null,
+      });
+
+      // Phase 2: Fetch remaining days in background and merge
+      const fullEnd = new Date(now);
+      fullEnd.setDate(fullEnd.getDate() + 60);
+
+      const [restPredictions, restHiLo] = await Promise.all([
+        fetchWithFallback(stationId, phase1End, fullEnd, '6'),
+        fetchWithFallback(stationId, phase1End, fullEnd, 'hilo'),
+      ]);
+      set((s) => ({
+        monthlyPredictions: [...s.monthlyPredictions, ...restPredictions],
+        monthlyHiLo: [...s.monthlyHiLo, ...restHiLo],
+      }));
     } catch (err) {
       set({ error: (err as Error).message, monthlyLoading: false });
     }

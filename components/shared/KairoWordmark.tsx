@@ -6,7 +6,7 @@ import { SvgXml } from 'react-native-svg';
  * Based on kairosurf-name-dark.svg but without background rect,
  * tagline, and tide curves — just the text for a clean header fit.
  */
-const WORDMARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 72">
+const WORDMARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 325 72">
   <defs>
     <linearGradient id="kairoGrad" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" style="stop-color:#93c8e0"/>
@@ -44,7 +44,7 @@ interface KairoWordmarkProps {
 }
 
 export function KairoWordmark({ height = 20 }: KairoWordmarkProps) {
-  // Preserve aspect ratio (460:72)
-  const width = (height / 72) * 460;
+  // Preserve aspect ratio (325:72)
+  const width = (height / 72) * 325;
   return <SvgXml xml={WORDMARK_SVG} width={width} height={height} />;
 }

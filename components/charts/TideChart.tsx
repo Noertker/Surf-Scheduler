@@ -25,6 +25,11 @@ interface Props {
   dayStartHour?: number;
   dayEndHour?: number;
   height?: number;
+  interactive?: boolean;
+  /** Externally-controlled active time for synchronized crosshair */
+  activeTime?: Date | null;
+  /** Called when user touches the chart with the nearest timestamp */
+  onTimeChange?: (time: Date | null) => void;
 }
 
 const PADDING = { top: 16, right: 16, bottom: 24, left: 36 };
@@ -37,6 +42,9 @@ export function TideChart({
   dayStartHour = DEFAULT_DAY_START,
   dayEndHour = DEFAULT_DAY_END,
   height = 200,
+  interactive = true,
+  activeTime,
+  onTimeChange,
 }: Props) {
   const colors = useColors();
   const chartWidth = Dimensions.get('window').width - 32;
@@ -111,15 +119,38 @@ export function TideChart({
   const { panHandlers, touchX, activeIndex: sampledActiveIdx } = useChartTouch(
     sampledPositions,
     PADDING.left,
-    chartWidth - PADDING.right
+    chartWidth - PADDING.right,
+    interactive,
   );
+
+  // Notify parent of active time on touch
+  const localActiveIdx = sampledActiveIdx != null ? sampledIndices[sampledActiveIdx] : null;
+  const localActiveReading = localActiveIdx != null ? filtered[localActiveIdx] : null;
+  React.useEffect(() => {
+    if (!onTimeChange) return;
+    onTimeChange(localActiveReading?.timestamp ?? null);
+  }, [localActiveReading?.timestamp?.getTime()]);
+
+  // Resolve which reading to highlight: external activeTime takes priority over local touch
+  const resolvedReading = useMemo(() => {
+    if (activeTime && xScale && filtered.length > 0) {
+      // Find nearest prediction to activeTime
+      let bestIdx = 0;
+      let bestDist = Math.abs(filtered[0].timestamp.getTime() - activeTime.getTime());
+      for (let i = 1; i < filtered.length; i++) {
+        const dist = Math.abs(filtered[i].timestamp.getTime() - activeTime.getTime());
+        if (dist < bestDist) { bestDist = dist; bestIdx = i; }
+      }
+      return filtered[bestIdx];
+    }
+    return localActiveReading;
+  }, [activeTime, localActiveReading, filtered]);
+
+  const showCrosshair = resolvedReading != null && (touchX != null || activeTime != null);
 
   if (!pathD || !xScale || !yScale) {
     return null;
   }
-
-  const activeIdx = sampledActiveIdx != null ? sampledIndices[sampledActiveIdx] : null;
-  const activeReading = activeIdx != null ? filtered[activeIdx] : null;
 
   return (
     <View style={styles.container} {...panHandlers}>
@@ -189,41 +220,45 @@ export function TideChart({
         <Path d={pathD} fill="none" stroke={colors.chartTide} strokeWidth={2.5} />
 
         {/* Touch crosshair */}
-        {touchX != null && activeReading && activeIdx != null && (
+        {showCrosshair && resolvedReading && (
           <>
             <Line
-              x1={xScale(activeReading.timestamp)}
+              x1={xScale(resolvedReading.timestamp)}
               y1={PADDING.top}
-              x2={xScale(activeReading.timestamp)}
+              x2={xScale(resolvedReading.timestamp)}
               y2={height - PADDING.bottom}
               stroke={colors.crosshairStroke}
               strokeWidth={1}
               strokeDasharray="4,3"
             />
             <Circle
-              cx={xScale(activeReading.timestamp)}
-              cy={yScale(activeReading.heightFt)}
+              cx={xScale(resolvedReading.timestamp)}
+              cy={yScale(resolvedReading.heightFt)}
               r={4}
               fill={colors.chartTide}
             />
-            {/* Label background */}
-            <Rect
-              x={clampLabelX(xScale(activeReading.timestamp) - 56, PADDING.left, chartWidth - PADDING.right - 112)}
-              y={0}
-              width={112}
-              height={18}
-              rx={4}
-              fill={colors.chartLabelBg}
-            />
-            <SvgText
-              x={clampLabelX(xScale(activeReading.timestamp), PADDING.left + 56, chartWidth - PADDING.right - 56)}
-              y={13}
-              fontSize={11}
-              fill={colors.crosshairLabelText}
-              textAnchor="middle"
-              fontWeight="600">
-              {activeReading.heightFt.toFixed(1)}ft @ {activeReading.timestamp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-            </SvgText>
+            {/* Label — only when no external sync (standalone mode) */}
+            {!activeTime && (
+              <>
+                <Rect
+                  x={clampLabelX(xScale(resolvedReading.timestamp) - 56, PADDING.left, chartWidth - PADDING.right - 112)}
+                  y={0}
+                  width={112}
+                  height={18}
+                  rx={4}
+                  fill={colors.chartLabelBg}
+                />
+                <SvgText
+                  x={clampLabelX(xScale(resolvedReading.timestamp), PADDING.left + 56, chartWidth - PADDING.right - 56)}
+                  y={13}
+                  fontSize={11}
+                  fill={colors.crosshairLabelText}
+                  textAnchor="middle"
+                  fontWeight="600">
+                  {resolvedReading.heightFt.toFixed(1)}ft @ {resolvedReading.timestamp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                </SvgText>
+              </>
+            )}
           </>
         )}
       </Svg>

@@ -4,9 +4,6 @@ import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
 import {
   SurferProfile,
-  SurferLevel,
-  Stance,
-  SURFER_LEVEL_OPTIONS,
   SURF_SKILL_OPTIONS,
 } from '@/types/profile';
 import { useProfileStore } from '@/stores/useProfileStore';
@@ -17,44 +14,6 @@ interface Props {
   visible: boolean;
   profile: SurferProfile | null;
   onClose: () => void;
-}
-
-const STANCE_OPTIONS: Stance[] = ['regular', 'goofy'];
-
-function EnumPicker<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-  formatLabel,
-  colors,
-}: {
-  label: string;
-  options: T[];
-  value: T;
-  onChange: (v: T) => void;
-  formatLabel?: (v: T) => string;
-  colors: ThemeColors;
-}) {
-  const styles = useMemo(() => pickerStyles(colors), [colors]);
-  return (
-    <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.row}>
-        {options.map((opt) => (
-          <Pressable
-            key={opt}
-            style={[styles.option, opt === value && styles.optionActive]}
-            onPress={() => onChange(opt)}
-          >
-            <Text style={[styles.optionText, opt === value && styles.optionTextActive]}>
-              {formatLabel ? formatLabel(opt) : opt}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
 }
 
 function MultiSelectPicker({
@@ -140,28 +99,18 @@ const pickerStyles = (colors: ThemeColors) =>
     },
   });
 
-const formatLevel = (level: string) =>
-  level.replace(/_/g, ' ');
-
 export function ProfileEditor({ visible, profile, onClose }: Props) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const saveProfile = useProfileStore((s) => s.saveProfile);
 
-  const [level, setLevel] = useState<SurferLevel>(profile?.level ?? 'beginner');
-  const [yearsExp, setYearsExp] = useState(profile?.years_experience?.toString() ?? '');
-  const [stance, setStance] = useState<Stance>(profile?.stance ?? 'regular');
   const [goals, setGoals] = useState<string[]>(profile?.goals ?? []);
   const [strengths, setStrengths] = useState<string[]>(profile?.strengths ?? []);
   const [weaknesses, setWeaknesses] = useState<string[]>(profile?.weaknesses ?? []);
   const [sessionFocus, setSessionFocus] = useState(profile?.session_focus ?? '');
 
   const handleSave = async () => {
-    const years = parseInt(yearsExp, 10);
     await saveProfile({
-      level,
-      years_experience: isNaN(years) ? 0 : years,
-      stance,
       goals,
       strengths,
       weaknesses,
@@ -184,35 +133,6 @@ export function ProfileEditor({ visible, profile, onClose }: Props) {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            <EnumPicker
-              label="Level"
-              options={SURFER_LEVEL_OPTIONS}
-              value={level}
-              onChange={setLevel}
-              formatLabel={formatLevel}
-              colors={colors}
-            />
-
-            <EnumPicker
-              label="Stance"
-              options={STANCE_OPTIONS}
-              value={stance}
-              onChange={setStance}
-              colors={colors}
-            />
-
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>YEARS SURFING</Text>
-              <TextInput
-                style={styles.input}
-                value={yearsExp}
-                onChangeText={setYearsExp}
-                keyboardType="number-pad"
-                placeholder="0"
-                placeholderTextColor={colors.textDim}
-              />
-            </View>
-
             <MultiSelectPicker
               label="Goals"
               options={SURF_SKILL_OPTIONS}
