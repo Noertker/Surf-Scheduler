@@ -6,7 +6,10 @@ import { getTidePredictions } from '@/services/noaa';
 import {
   computeTimelinePredictions,
 } from '@/services/tidePredictor';
-import { fetchWindData, fetchDetailedSwellData } from '@/services/openMeteo';
+import { fetchWindWithFallback, fetchDetailedSwellWithFallback } from '@/services/forecasts';
+import { degToCompass } from '@/utils/tideWindows';
+
+export { degToCompass };
 
 export interface LiveForecast {
   tide: { startFt: number; endFt: number } | null;
@@ -26,12 +29,6 @@ export interface DetailedSwellSummary {
   energyKj: number;
 }
 
-const degToCompass = (d: number) => {
-  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-  return dirs[Math.round(d / 22.5) % 16];
-};
-
-export { degToCompass };
 
 /**
  * Batched live forecast hook.
@@ -97,8 +94,8 @@ export function useSessionForecasts(sessions: SurfSession[]): {
           // Fetch tide, wind, swell in parallel
           const [tidePredictions, windData, swellData] = await Promise.all([
             fetchTideWithFallback(spot.noaa_station_id, tideStart, tideEnd),
-            fetchWindData(spot.lat, spot.lng, 7).catch(() => []),
-            fetchDetailedSwellData(spot.lat, spot.lng, 7).catch(() => []),
+            fetchWindWithFallback(spot.lat, spot.lng, 16).catch(() => []),
+            fetchDetailedSwellWithFallback(spot.lat, spot.lng, 16).catch(() => []),
           ]);
 
           // Distribute to each session

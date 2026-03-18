@@ -33,3 +33,44 @@ export interface DetailedSwellReading {
   // Computed energy: proportional to H^2 * T (kJ/m)
   energyKj: number;
 }
+
+export interface SwellComponentReading {
+  validAt: Date;
+  componentIndex: number;
+  heightM: number;
+  heightFt: number;
+  periodS: number;
+  directionDeg: number;
+  directionCompass: string;
+  energyDensity: number | null;
+  sourceType: 'buoy_spectral' | 'forecast';
+}
+
+export interface BuoyObservation {
+  stationId: string;
+  observedAt: Date;
+  waveHeightM: number | null;
+  waveHeightFt: number | null;
+  dominantPeriodS: number | null;
+  meanDirectionDeg: number | null;
+  windSpeedMps: number | null;
+  windDirectionDeg: number | null;
+  waterTempC: number | null;
+  waterTempF: number | null;
+}
+
+export interface MultiSwellReading {
+  timestamp: Date;
+  components: {
+    index: number;
+    heightFt: number;
+    periodS: number;
+    directionDeg: number;
+    directionCompass: string;
+    label: string;
+  }[];
+  combinedHeightFt: number;
+  combinedDirectionDeg: number;
+  combinedPeriodS: number;
+  energyKj: number;
+}

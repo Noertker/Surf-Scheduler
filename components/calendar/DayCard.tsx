@@ -25,12 +25,13 @@ interface Props {
   dayStartHour?: number;
   dayEndHour?: number;
   compact?: boolean;
+  onDetailsPress?: () => void;
 }
 
 function DayCardInner({
   date, predictions, hiLo, windows, wind, swell,
   tideMin, tideMax, dayStartHour, dayEndHour,
-  compact = false,
+  compact = false, onDetailsPress,
 }: Props) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -173,7 +174,14 @@ function DayCardInner({
   return (
     <View style={[styles.card, compact && styles.cardCompact]}>
       {/* Date header */}
-      <Text style={styles.dateHeader}>{dateStr}</Text>
+      <View style={styles.dateRow}>
+        <Text style={styles.dateHeader}>{dateStr}</Text>
+        {onDetailsPress && (
+          <Pressable onPress={onDetailsPress} hitSlop={8} style={styles.detailsButton}>
+            <Text style={styles.detailsButtonText}>Details</Text>
+          </Pressable>
+        )}
+      </View>
 
       {/* Tide windows */}
       {sortedWindows.length > 0 ? (
@@ -385,11 +393,29 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   cardCompact: {
     paddingVertical: 12,
   },
+  dateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    backgroundColor: 'transparent',
+  },
   dateHeader: {
     fontSize: 15,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 10,
+  },
+  detailsButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  detailsButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
   },
   windowsSection: {
     marginBottom: 8,

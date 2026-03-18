@@ -38,7 +38,7 @@ export async function fetchAllGroupsWithSpots(): Promise<
     .from('spot_groups')
     .select(
       `
-      id, name, display_order,
+      id, name, display_order, region_id,
       spot_group_members ( spots(*) )
     `
     )
@@ -47,7 +47,7 @@ export async function fetchAllGroupsWithSpots(): Promise<
   if (error) throw error;
 
   return (data ?? []).map((g: any) => ({
-    group: { id: g.id, name: g.name, display_order: g.display_order },
+    group: { id: g.id, name: g.name, display_order: g.display_order, region_id: g.region_id ?? null },
     spots: (g.spot_group_members ?? [])
       .map((m: any) => m.spots)
       .filter(Boolean)

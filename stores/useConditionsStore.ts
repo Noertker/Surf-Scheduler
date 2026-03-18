@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { SwellReading, WindReading } from '@/types/conditions';
-import { fetchSwellData, fetchWindData } from '@/services/openMeteo';
+import { fetchSwellWithFallback, fetchWindWithFallback } from '@/services/forecasts';
 
 interface ConditionsState {
   swell: SwellReading[];
@@ -20,8 +20,8 @@ export const useConditionsStore = create<ConditionsState>((set) => ({
     set({ loading: true, error: null });
     try {
       const [swell, wind] = await Promise.all([
-        fetchSwellData(lat, lng, 7),
-        fetchWindData(lat, lng, 7),
+        fetchSwellWithFallback(lat, lng, 16),
+        fetchWindWithFallback(lat, lng, 16),
       ]);
       set({ swell, wind, loading: false });
     } catch (err) {

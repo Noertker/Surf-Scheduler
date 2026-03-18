@@ -88,6 +88,10 @@ Streamline onboarding into a single guided flow that feeds directly into the pro
 - Per-spot conditions matching based on surfer's progression stage
 - "This spot works for your level today" indicators
 
+### 7d. Spot Swell Power Windows
+- Similar to tide windows, set minimum swell heights and periods to be on the lookout
+- Color shade the tide window based on the quality of swell and how well it matches
+
 ---
 
 ## Phase 8 — Adaptive Calendar & Board Recs

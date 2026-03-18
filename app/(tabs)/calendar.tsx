@@ -2,11 +2,12 @@ import { CalendarGrid } from '@/components/calendar/CalendarGrid';
 import { CalendarSubHeader } from '@/components/calendar/CalendarSubHeader';
 import { DayCard } from '@/components/calendar/DayCard';
 import { DayDetail } from '@/components/calendar/DayDetail';
+import { ForecastDetail } from '@/components/calendar/ForecastDetail';
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
-import { fetchSwellData, fetchWindData } from '@/services/openMeteo';
+import { fetchSwellWithFallback, fetchWindWithFallback } from '@/services/forecasts';
 import { useThemeStore } from '@/hooks/useThemeStore';
 import { useGroupStore } from '@/stores/useGroupStore';
 import { usePreferenceStore } from '@/stores/usePreferenceStore';
@@ -63,8 +64,9 @@ export default function DashboardScreen() {
     const spot = groupSpots[0];
     if (spot?.noaa_station_id) fetchMonthlyTides(spot.noaa_station_id);
     if (spot) {
-      fetchWindData(spot.lat, spot.lng, 7).then(setWind).catch(() => setWind([]));
-      fetchSwellData(spot.lat, spot.lng, 7).then(setSwell).catch(() => setSwell([]));
+      fetchWindWithFallback(spot.lat, spot.lng, 16).then(setWind).catch(() => setWind([]));
+      fetchSwellWithFallback(spot.lat, spot.lng, 16).then(setSwell).catch(() => setSwell([]));
+
     }
   }, [groupSpots]);
 
@@ -166,6 +168,7 @@ export default function DashboardScreen() {
         dayStartHour={dayStartHour}
         dayEndHour={dayEndHour}
         compact
+        onDetailsPress={() => setSelectedDate(item.date)}
       />
     ),
     [dayMap, hiLoMap, dayWindows, wind, swell, representativePref, dayStartHour, dayEndHour]
@@ -238,6 +241,24 @@ export default function DashboardScreen() {
             viewabilityConfig={viewabilityConfig}
           />
         )}
+
+        {selectedDate && (
+          <ForecastDetail
+            visible={!!selectedDate}
+            date={selectedDate}
+            predictions={selectedDayData.predictions}
+            wind={wind}
+            swell={swell}
+            tideMin={representativePref?.tide_min_ft}
+            tideMax={representativePref?.tide_max_ft}
+            dayStartHour={dayStartHour}
+            dayEndHour={dayEndHour}
+            spotNdbcStationId={groupSpots[0]?.ndbc_station_id}
+            spotLat={groupSpots[0]?.lat}
+            spotLng={groupSpots[0]?.lng}
+            onClose={() => setSelectedDate(null)}
+          />
+        )}
       </View>
     );
   }
@@ -292,6 +313,9 @@ export default function DashboardScreen() {
           tideMax={representativePref?.tide_max_ft}
           dayStartHour={dayStartHour}
           dayEndHour={dayEndHour}
+          spotNdbcStationId={groupSpots[0]?.ndbc_station_id}
+          spotLat={groupSpots[0]?.lat}
+          spotLng={groupSpots[0]?.lng}
           onClose={() => setSelectedDate(null)}
           onPrevDay={() => {
             const prev = new Date(selectedDate);

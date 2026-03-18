@@ -291,6 +291,12 @@ verify_jwt = false
 [functions.surf-coach]
 verify_jwt = false
 
+[functions.fetch-forecasts]
+verify_jwt = false
+
+[functions.fetch-buoy-spectra]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Configure one of the supported request policies: `oneshot`, `per_worker`.

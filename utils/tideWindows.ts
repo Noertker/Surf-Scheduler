@@ -70,6 +70,11 @@ export function calculateTideWindows(
 /**
  * Returns YYYY-MM-DD in local time (not UTC).
  */
+export function degToCompass(d: number): string {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(d / 22.5) % 16];
+}
+
 export function localDateKey(d: Date): string {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
