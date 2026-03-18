@@ -28,7 +28,7 @@ export async function fetchCachedSwellData(
 
   const { data, error } = await supabase
     .from('forecast_cache')
-    .select('forecast_hour, swell_height_m, swell_direction_deg, swell_period_s')
+    .select('forecast_hour, swell_height_m, swell_direction_deg, swell_period_s, secondary_swell_height_m, secondary_swell_direction_deg, secondary_swell_period_s')
     .eq('lat_grid', latGrid)
     .eq('lng_grid', lngGrid)
     .gte('forecast_hour', now.toISOString())
@@ -45,6 +45,9 @@ export async function fetchCachedSwellData(
       heightFt: +(row.swell_height_m * M_TO_FT).toFixed(1),
       directionDeg: row.swell_direction_deg,
       periodS: row.swell_period_s,
+      secondaryHeightFt: row.secondary_swell_height_m != null ? +(row.secondary_swell_height_m * M_TO_FT).toFixed(1) : null,
+      secondaryDirectionDeg: row.secondary_swell_direction_deg ?? null,
+      secondaryPeriodS: row.secondary_swell_period_s ?? null,
     }));
 }
 

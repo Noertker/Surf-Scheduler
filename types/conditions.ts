@@ -4,6 +4,10 @@ export interface SwellReading {
   heightFt: number;
   directionDeg: number;
   periodS: number;
+  // Optional secondary swell (from forecast_cache)
+  secondaryHeightFt?: number | null;
+  secondaryDirectionDeg?: number | null;
+  secondaryPeriodS?: number | null;
 }
 
 export interface WindReading {

@@ -11,6 +11,8 @@ interface Props {
   wind: WindReading[];
   date: Date;
   size?: number;
+  /** Hide NESW labels and arrow value labels (compact tooltip mode) */
+  hideLabels?: boolean;
 }
 
 const CARDINAL = ['N', 'E', 'S', 'W'] as const;
@@ -62,11 +64,12 @@ export function SwellWindCompass({
   wind,
   date,
   size = 200,
+  hideLabels = false,
 }: Props) {
   const colors = useColors();
   const cx = size / 2;
   const cy = size / 2;
-  const outerR = size / 2 - 20; // leave room for labels
+  const outerR = hideLabels ? size / 2 - 4 : size / 2 - 20; // more space when no labels
   const innerRings = [outerR * 0.33, outerR * 0.66, outerR];
 
   const dayKey = localDateKey(date);
@@ -105,9 +108,9 @@ export function SwellWindCompass({
       if (energy > max) max = energy;
     }
     if (nearestWind) {
-      // Wind: use speed * 3 to make comparable scale
-      const windEnergy = nearestWind.speedMph * 3;
-      if (windEnergy > max) max = windEnergy;
+      // Wind: use gusts * 3 to make comparable scale (gusts >= speed)
+      const gustEnergy = nearestWind.gustsMph * 3;
+      if (gustEnergy > max) max = gustEnergy;
     }
     return max;
   }, [latestSwellComps, nearestWind]);
@@ -115,7 +118,7 @@ export function SwellWindCompass({
   if (latestSwellComps.length === 0 && !nearestWind) return null;
 
   return (
-    <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+    <View style={{ alignItems: 'center', paddingVertical: hideLabels ? 0 : 8 }}>
       <Svg width={size} height={size}>
         {/* Concentric guide circles */}
         {innerRings.map((r, i) => (
@@ -147,7 +150,7 @@ export function SwellWindCompass({
         })}
 
         {/* Cardinal labels */}
-        {CARDINAL.map((label, i) => {
+        {!hideLabels && CARDINAL.map((label, i) => {
           const pos = dirToXY(CARDINAL_ANGLES[i], outerR + 14, cx, cy);
           return (
             <SvgText
@@ -187,21 +190,40 @@ export function SwellWindCompass({
                 opacity={0.85}
               />
               {/* Value label at midpoint of arrow */}
-              <SvgText
-                x={midPos.x}
-                y={midPos.y + 3}
-                fontSize={9}
-                fontWeight="700"
-                fill={colors.text}
-                textAnchor="middle"
-              >
-                {comp.heightFt}ft {comp.periodS}s
-              </SvgText>
+              {!hideLabels && (
+                <SvgText
+                  x={midPos.x}
+                  y={midPos.y + 3}
+                  fontSize={9}
+                  fontWeight="700"
+                  fill={colors.text}
+                  textAnchor="middle"
+                >
+                  {comp.heightFt}ft {comp.periodS}s
+                </SvgText>
+              )}
             </React.Fragment>
           );
         })}
 
-        {/* Wind arrow */}
+        {/* Wind gust arrow (lighter, behind speed arrow) */}
+        {nearestWind && nearestWind.gustsMph > nearestWind.speedMph && (() => {
+          const gustEnergy = nearestWind.gustsMph * 3;
+          const gustScale = Math.min(gustEnergy / maxEnergy, 1);
+          const gustLen = gustScale * outerR * 0.6;
+          const gustThickness = Math.max(4, gustScale * 12);
+          const gustTipR = outerR - gustLen;
+
+          return (
+            <Path
+              d={arrowPath(nearestWind.directionDeg, outerR, gustTipR, gustThickness, cx, cy)}
+              fill={colors.chartWind}
+              opacity={0.25}
+            />
+          );
+        })()}
+
+        {/* Wind speed arrow */}
         {nearestWind && nearestWind.speedMph > 0 && (() => {
           const windEnergy = nearestWind.speedMph * 3;
           const scale = Math.min(windEnergy / maxEnergy, 1);
@@ -219,16 +241,18 @@ export function SwellWindCompass({
                 fill={colors.chartWind}
                 opacity={0.7}
               />
-              <SvgText
-                x={midPos.x}
-                y={midPos.y + 3}
-                fontSize={9}
-                fontWeight="700"
-                fill={colors.text}
-                textAnchor="middle"
-              >
-                {Math.round(nearestWind.speedMph)}mph
-              </SvgText>
+              {!hideLabels && (
+                <SvgText
+                  x={midPos.x}
+                  y={midPos.y + 3}
+                  fontSize={9}
+                  fontWeight="700"
+                  fill={colors.text}
+                  textAnchor="middle"
+                >
+                  {Math.round(nearestWind.speedMph)}mph
+                </SvgText>
+              )}
             </>
           );
         })()}

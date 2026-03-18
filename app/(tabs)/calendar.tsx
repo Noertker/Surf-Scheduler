@@ -2,7 +2,6 @@ import { CalendarGrid } from '@/components/calendar/CalendarGrid';
 import { CalendarSubHeader } from '@/components/calendar/CalendarSubHeader';
 import { DayCard } from '@/components/calendar/DayCard';
 import { DayDetail } from '@/components/calendar/DayDetail';
-import { ForecastDetail } from '@/components/calendar/ForecastDetail';
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
 import { useColors } from '@/hooks/useColors';
@@ -168,7 +167,6 @@ export default function DashboardScreen() {
         dayStartHour={dayStartHour}
         dayEndHour={dayEndHour}
         compact
-        onDetailsPress={() => setSelectedDate(item.date)}
       />
     ),
     [dayMap, hiLoMap, dayWindows, wind, swell, representativePref, dayStartHour, dayEndHour]
@@ -242,23 +240,6 @@ export default function DashboardScreen() {
           />
         )}
 
-        {selectedDate && (
-          <ForecastDetail
-            visible={!!selectedDate}
-            date={selectedDate}
-            predictions={selectedDayData.predictions}
-            wind={wind}
-            swell={swell}
-            tideMin={representativePref?.tide_min_ft}
-            tideMax={representativePref?.tide_max_ft}
-            dayStartHour={dayStartHour}
-            dayEndHour={dayEndHour}
-            spotNdbcStationId={groupSpots[0]?.ndbc_station_id}
-            spotLat={groupSpots[0]?.lat}
-            spotLng={groupSpots[0]?.lng}
-            onClose={() => setSelectedDate(null)}
-          />
-        )}
       </View>
     );
   }

@@ -4,11 +4,10 @@ import Svg, { Path, Line, Text as SvgText, Circle, Rect } from 'react-native-svg
 import { line, area, curveNatural } from 'd3-shape';
 import { scaleLinear, scaleTime } from 'd3-scale';
 import { SwellReading } from '@/types/conditions';
-import { DEFAULT_DAY_START, DEFAULT_DAY_END } from '@/utils/tideWindows';
+import { DEFAULT_DAY_START, DEFAULT_DAY_END, degToCompass } from '@/utils/tideWindows';
 import { View } from '@/components/shared/View';
 import { useChartTouch } from '@/hooks/useChartTouch';
 import { useColors } from '@/hooks/useColors';
-import { ThemeColors } from '@/constants/theme';
 
 interface Props {
   swell: SwellReading[];
@@ -18,14 +17,11 @@ interface Props {
   interactive?: boolean;
   activeTime?: Date | null;
   onTimeChange?: (time: Date | null) => void;
+  label?: string;
 }
 
 const PADDING = { top: 16, right: 16, bottom: 24, left: 36 };
-
-const degToCompass = (d: number) => {
-  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
-  return dirs[Math.round(d / 22.5) % 16];
-};
+const SECONDARY_COLOR = '#f59e0b'; // amber/orange to match component color scheme
 
 export function SwellChart({
   swell,
@@ -35,12 +31,13 @@ export function SwellChart({
   interactive = true,
   activeTime,
   onTimeChange,
+  label,
 }: Props) {
   const colors = useColors();
   const chartWidth = Dimensions.get('window').width - 32;
 
-  const { heightPath, heightArea, xScale, yScale, ticks, filtered } = useMemo(() => {
-    const empty = { heightPath: '', heightArea: '', xScale: null, yScale: null, ticks: [], filtered: [] as SwellReading[] };
+  const { heightPath, heightArea, secondaryPath, secondaryArea, xScale, yScale, ticks, filtered } = useMemo(() => {
+    const empty = { heightPath: '', heightArea: '', secondaryPath: '', secondaryArea: '', xScale: null, yScale: null, ticks: [], filtered: [] as SwellReading[] };
     if (swell.length === 0) return empty;
 
     const refDate = swell[0].timestamp;
@@ -54,7 +51,13 @@ export function SwellChart({
     );
     if (f.length === 0) return empty;
 
-    const maxH = Math.max(...f.map((r) => r.heightFt));
+    // Include secondary heights in max calculation
+    const allHeights = f.flatMap((r) => {
+      const h = [r.heightFt];
+      if (r.secondaryHeightFt != null) h.push(r.secondaryHeightFt);
+      return h;
+    });
+    const maxH = Math.max(...allHeights);
     const yMax = Math.ceil(maxH) + 1;
 
     const xS = scaleTime()
@@ -76,6 +79,25 @@ export function SwellChart({
       .y1((d) => yS(d.heightFt))
       .curve(curveNatural);
 
+    // Secondary swell line (only if data exists)
+    const hasSecondary = f.some((r) => r.secondaryHeightFt != null);
+    let secPath = '';
+    let secArea = '';
+    if (hasSecondary) {
+      const secFiltered = f.filter((r) => r.secondaryHeightFt != null);
+      const sLine = line<SwellReading>()
+        .x((d) => xS(d.timestamp))
+        .y((d) => yS(d.secondaryHeightFt!))
+        .curve(curveNatural);
+      const sArea = area<SwellReading>()
+        .x((d) => xS(d.timestamp))
+        .y0(yS(0))
+        .y1((d) => yS(d.secondaryHeightFt!))
+        .curve(curveNatural);
+      secPath = sLine(secFiltered) ?? '';
+      secArea = sArea(secFiltered) ?? '';
+    }
+
     const timeTicks: Date[] = [];
     const firstTick = Math.ceil(dayStartHour / 3) * 3;
     for (let h = firstTick; h <= dayEndHour; h += 3) {
@@ -87,6 +109,8 @@ export function SwellChart({
     return {
       heightPath: hLine(f) ?? '',
       heightArea: hArea(f) ?? '',
+      secondaryPath: secPath,
+      secondaryArea: secArea,
       xScale: xS,
       yScale: yS,
       ticks: timeTicks,
@@ -173,10 +197,18 @@ export function SwellChart({
           />
         ))}
 
-        {/* Swell height area fill */}
+        {/* Secondary swell area + line (behind primary) */}
+        {secondaryArea !== '' && (
+          <Path d={secondaryArea} fill="rgba(245, 158, 11, 0.1)" />
+        )}
+        {secondaryPath !== '' && (
+          <Path d={secondaryPath} fill="none" stroke={SECONDARY_COLOR} strokeWidth={1.5} strokeDasharray="4,3" opacity={0.7} />
+        )}
+
+        {/* Primary swell height area fill */}
         <Path d={heightArea} fill="rgba(6, 182, 212, 0.15)" />
 
-        {/* Swell height line */}
+        {/* Primary swell height line */}
         <Path d={heightPath} fill="none" stroke={colors.chartSwell} strokeWidth={2} />
 
         {/* Touch crosshair */}
@@ -191,25 +223,35 @@ export function SwellChart({
               strokeWidth={1}
               strokeDasharray="4,3"
             />
+            {/* Primary dot */}
             <Circle
               cx={xScale(resolvedReading.timestamp)}
               cy={yScale(resolvedReading.heightFt)}
               r={4}
               fill={colors.chartSwell}
             />
+            {/* Secondary dot */}
+            {resolvedReading.secondaryHeightFt != null && (
+              <Circle
+                cx={xScale(resolvedReading.timestamp)}
+                cy={yScale(resolvedReading.secondaryHeightFt)}
+                r={3}
+                fill={SECONDARY_COLOR}
+              />
+            )}
             {/* Label — only when no external sync */}
             {!activeTime && (
               <>
                 <Rect
-                  x={clampLabelX(xScale(resolvedReading.timestamp) - 70, PADDING.left, chartWidth - PADDING.right - 140)}
+                  x={clampLabelX(xScale(resolvedReading.timestamp) - 80, PADDING.left, chartWidth - PADDING.right - 160)}
                   y={0}
-                  width={140}
-                  height={18}
+                  width={160}
+                  height={resolvedReading.secondaryHeightFt != null ? 30 : 18}
                   rx={4}
                   fill={colors.chartLabelBg}
                 />
                 <SvgText
-                  x={clampLabelX(xScale(resolvedReading.timestamp), PADDING.left + 70, chartWidth - PADDING.right - 70)}
+                  x={clampLabelX(xScale(resolvedReading.timestamp), PADDING.left + 80, chartWidth - PADDING.right - 80)}
                   y={13}
                   fontSize={11}
                   fill={colors.crosshairLabelText}
@@ -217,9 +259,34 @@ export function SwellChart({
                   fontWeight="600">
                   {resolvedReading.heightFt}ft @ {Math.round(resolvedReading.periodS)}s {degToCompass(resolvedReading.directionDeg)}
                 </SvgText>
+                {resolvedReading.secondaryHeightFt != null && (
+                  <SvgText
+                    x={clampLabelX(xScale(resolvedReading.timestamp), PADDING.left + 80, chartWidth - PADDING.right - 80)}
+                    y={25}
+                    fontSize={9}
+                    fill={SECONDARY_COLOR}
+                    textAnchor="middle"
+                    fontWeight="600">
+                    {resolvedReading.secondaryHeightFt}ft @ {Math.round(resolvedReading.secondaryPeriodS!)}s {degToCompass(resolvedReading.secondaryDirectionDeg!)}
+                  </SvgText>
+                )}
               </>
             )}
           </>
+        )}
+
+        {/* Floating chart label */}
+        {label && (
+          <SvgText
+            x={PADDING.left + 2}
+            y={height - PADDING.bottom - 4}
+            fontSize={10}
+            fontWeight="700"
+            fill={colors.chartSwell}
+            opacity={0.7}
+          >
+            {label}
+          </SvgText>
         )}
       </Svg>
     </View>

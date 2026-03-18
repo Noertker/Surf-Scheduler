@@ -78,6 +78,11 @@ export async function getTidePredictions(
 ): Promise<TidePrediction[]> {
   // Check cache first (non-fatal — if cache fails, just fetch from NOAA)
   try {
+    const days = Math.ceil(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    // 6-minute data: ~240 rows/day; default Supabase limit is 1000 rows
+    const queryLimit = interval === '6' ? days * 250 : days * 10;
     const { data: cached, error: cacheErr } = await supabase
       .from('tide_cache')
       .select('*')
@@ -85,15 +90,16 @@ export async function getTidePredictions(
       .eq('interval', interval)
       .gte('timestamp', startDate.toISOString())
       .lte('timestamp', endDate.toISOString())
-      .order('timestamp');
+      .order('timestamp')
+      .limit(queryLimit);
 
-    if (!cacheErr && cached) {
-      const days = Math.ceil(
-        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      const minExpected = interval === '6' ? days * 100 : days * 2;
+    if (!cacheErr && cached && cached.length > 0) {
+      // Verify cached data actually spans the requested date range
+      const firstTs = new Date(cached[0].timestamp).getTime();
+      const lastTs = new Date(cached[cached.length - 1].timestamp).getTime();
+      const coverageDays = (lastTs - firstTs) / (1000 * 60 * 60 * 24);
 
-      if (cached.length >= minExpected) {
+      if (coverageDays >= days - 1) {
         return cached.map((row) => ({
           timestamp: new Date(row.timestamp),
           heightFt: Number(row.height_ft),

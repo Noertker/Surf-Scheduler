@@ -5,13 +5,15 @@ import { View } from '@/components/shared/View';
 import { TideChart } from '@/components/charts/TideChart';
 import { WindChart } from '@/components/charts/WindChart';
 import { SwellChart } from '@/components/charts/SwellChart';
+import { SwellWindCompass } from '@/components/charts/SwellWindCompass';
 import { SessionTimeEditor } from '@/components/sessions/SessionTimeEditor';
 import { ThemeColors } from '@/constants/theme';
 import { useColors } from '@/hooks/useColors';
 import { TidePrediction, TideWindow } from '@/types/tide';
-import { WindReading, SwellReading } from '@/types/conditions';
-import { formatTimeCompact, localDateKey } from '@/utils/tideWindows';
+import { WindReading, SwellReading, SwellComponentReading } from '@/types/conditions';
+import { formatTimeCompact, localDateKey, degToCompass } from '@/utils/tideWindows';
 import { useSessionStore } from '@/stores/useSessionStore';
+import { COMPONENT_COLORS } from '@/components/calendar/SwellDetailPanel';
 
 interface Props {
   date: Date;
@@ -154,7 +156,7 @@ function DayCardInner({
       }
     }
 
-    let swellR: { heightFt: number; periodS: number; directionDeg: number } | null = null;
+    let swellR: SwellReading | null = null;
     if (daySwell.length > 0) {
       let bestDist = Infinity;
       for (const s of daySwell) {
@@ -166,6 +168,50 @@ function DayCardInner({
     const timeStr = activeTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     return { timeStr, tide, wind: windR, swell: swellR };
   }, [activeTime, predictions, dayWind, daySwell]);
+
+  // Synthesize compass data from tooltip's active readings
+  const tooltipCompassComponents = useMemo<SwellComponentReading[]>(() => {
+    if (!tooltipData?.swell) return [];
+    const s = tooltipData.swell;
+    const comps: SwellComponentReading[] = [{
+      validAt: date,
+      componentIndex: 0,
+      heightM: s.heightM,
+      heightFt: s.heightFt,
+      periodS: s.periodS,
+      directionDeg: s.directionDeg,
+      directionCompass: degToCompass(s.directionDeg),
+      energyDensity: null,
+      sourceType: 'forecast',
+    }];
+    if (s.secondaryHeightFt != null && s.secondaryDirectionDeg != null && s.secondaryPeriodS != null) {
+      comps.push({
+        validAt: date,
+        componentIndex: 1,
+        heightM: s.secondaryHeightFt / 3.28084,
+        heightFt: s.secondaryHeightFt,
+        periodS: s.secondaryPeriodS,
+        directionDeg: s.secondaryDirectionDeg,
+        directionCompass: degToCompass(s.secondaryDirectionDeg),
+        energyDensity: null,
+        sourceType: 'forecast',
+      });
+    }
+    return comps;
+  }, [tooltipData?.swell, date]);
+
+  const tooltipCompassWind = useMemo<WindReading[]>(() => {
+    if (!tooltipData?.wind) return [];
+    const w = tooltipData.wind;
+    return [{
+      timestamp: date,
+      speedKmh: w.speedMph / 0.621371,
+      speedMph: w.speedMph,
+      directionDeg: w.directionDeg,
+      gustsKmh: w.gustsMph / 0.621371,
+      gustsMph: w.gustsMph,
+    }];
+  }, [tooltipData?.wind, date]);
 
   const tideHeight = compact ? 100 : 200;
   const windHeight = compact ? 70 : 140;
@@ -270,7 +316,7 @@ function DayCardInner({
             );
           })}
         </View>
-      ) : (
+      ) : compact ? null : (
         <Text style={styles.noWindows}>
           No tide windows match your preferences for this day.
         </Text>
@@ -281,22 +327,42 @@ function DayCardInner({
         {/* Floating tooltip for synchronized crosshair (compact mode) */}
         {compact && tooltipData && (
           <View style={styles.tooltip} pointerEvents="none">
-            <Text style={styles.tooltipTime}>{tooltipData.timeStr}</Text>
-            <View style={styles.tooltipRow}>
-              {tooltipData.tide && (
-                <Text style={styles.tooltipItem}>
-                  {tooltipData.tide.heightFt.toFixed(1)}ft tide
-                </Text>
-              )}
-              {tooltipData.swell && (
-                <Text style={styles.tooltipItem}>
-                  {tooltipData.swell.heightFt}ft @ {Math.round(tooltipData.swell.periodS)}s swell
-                </Text>
-              )}
-              {tooltipData.wind && (
-                <Text style={styles.tooltipItem}>
-                  {Math.round(tooltipData.wind.speedMph)}mph g{Math.round(tooltipData.wind.gustsMph)} wind
-                </Text>
+            <View style={styles.tooltipColumns}>
+              {/* Left column: readings */}
+              <View style={styles.tooltipLeft}>
+                <Text style={styles.tooltipTime}>{tooltipData.timeStr}</Text>
+                {tooltipData.tide && (
+                  <Text style={styles.tooltipItem}>
+                    {tooltipData.tide.heightFt.toFixed(1)}ft tide
+                  </Text>
+                )}
+                {tooltipData.swell && (
+                  <Text style={[styles.tooltipItem, { color: COMPONENT_COLORS[0] }]}>
+                    {tooltipData.swell.heightFt}ft @ {Math.round(tooltipData.swell.periodS)}s {degToCompass(tooltipData.swell.directionDeg)} {Math.round(tooltipData.swell.directionDeg)}°
+                  </Text>
+                )}
+                {tooltipData.swell?.secondaryHeightFt != null && (
+                  <Text style={[styles.tooltipItem, { color: COMPONENT_COLORS[1] }]}>
+                    {tooltipData.swell.secondaryHeightFt}ft @ {Math.round(tooltipData.swell.secondaryPeriodS!)}s {degToCompass(tooltipData.swell.secondaryDirectionDeg!)} {Math.round(tooltipData.swell.secondaryDirectionDeg!)}°
+                  </Text>
+                )}
+                {tooltipData.wind && (
+                  <Text style={[styles.tooltipItem, { color: colors.chartWind }]}>
+                    {Math.round(tooltipData.wind.speedMph)}mph g{Math.round(tooltipData.wind.gustsMph)} {degToCompass(tooltipData.wind.directionDeg)}
+                  </Text>
+                )}
+              </View>
+              {/* Right column: compass */}
+              {(tooltipData.swell || tooltipData.wind) && (
+                <View style={styles.tooltipRight}>
+                  <SwellWindCompass
+                    swellComponents={tooltipCompassComponents}
+                    wind={tooltipCompassWind}
+                    date={date}
+                    size={70}
+                    hideLabels
+                  />
+                </View>
               )}
             </View>
           </View>
@@ -312,7 +378,7 @@ function DayCardInner({
           dayEndHour={dayEndHour}
           height={tideHeight}
           interactive={true}
-          {...(compact ? { activeTime, onTimeChange: handleTimeChange } : {})}
+          {...(compact ? { activeTime, onTimeChange: handleTimeChange, label: 'TIDE' } : {})}
         />
 
         {/* Hi/Lo display */}
@@ -344,7 +410,7 @@ function DayCardInner({
               dayEndHour={dayEndHour}
               height={windHeight}
               interactive={true}
-              {...(compact ? { activeTime, onTimeChange: handleTimeChange } : {})}
+              {...(compact ? { activeTime, onTimeChange: handleTimeChange, label: 'WIND' } : {})}
             />
           </View>
         )}
@@ -359,7 +425,7 @@ function DayCardInner({
               dayEndHour={dayEndHour}
               height={swellHeight}
               interactive={true}
-              {...(compact ? { activeTime, onTimeChange: handleTimeChange } : {})}
+              {...(compact ? { activeTime, onTimeChange: handleTimeChange, label: 'SWELL' } : {})}
             />
           </View>
         )}
@@ -380,7 +446,9 @@ export const DayCard = React.memo(DayCardInner, (prev, next) => {
     prev.predictions.length === next.predictions.length &&
     prev.compact === next.compact &&
     prev.tideMin === next.tideMin &&
-    prev.tideMax === next.tideMax
+    prev.tideMax === next.tideMax &&
+    prev.wind === next.wind &&
+    prev.swell === next.swell
   );
 });
 
@@ -597,27 +665,32 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   tooltip: {
     position: 'absolute',
     top: 0,
-    left: 16,
-    right: 16,
+    left: 12,
+    right: 12,
     zIndex: 10,
     backgroundColor: colors.chartLabelBg,
     borderRadius: 8,
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
+  },
+  tooltipColumns: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  tooltipLeft: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  tooltipRight: {
+    marginLeft: 4,
+    backgroundColor: 'transparent',
   },
   tooltipTime: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.text,
     marginBottom: 2,
-  },
-  tooltipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: 'transparent',
   },
   tooltipItem: {
     fontSize: 11,

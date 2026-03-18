@@ -18,6 +18,7 @@ interface Props {
   interactive?: boolean;
   activeTime?: Date | null;
   onTimeChange?: (time: Date | null) => void;
+  label?: string;
 }
 
 const PADDING = { top: 16, right: 16, bottom: 24, left: 36 };
@@ -35,6 +36,7 @@ export function WindChart({
   interactive = true,
   activeTime,
   onTimeChange,
+  label,
 }: Props) {
   const colors = useColors();
   const chartWidth = Dimensions.get('window').width - 32;
@@ -229,6 +231,20 @@ export function WindChart({
               </>
             )}
           </>
+        )}
+
+        {/* Floating chart label */}
+        {label && (
+          <SvgText
+            x={PADDING.left + 2}
+            y={height - PADDING.bottom - 4}
+            fontSize={10}
+            fontWeight="700"
+            fill={colors.chartWind}
+            opacity={0.7}
+          >
+            {label}
+          </SvgText>
         )}
       </Svg>
     </View>
