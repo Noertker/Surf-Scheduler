@@ -13,8 +13,10 @@ import { TidePrediction } from '@/types/tide';
 import { useSpotStore } from '@/stores/useSpotStore';
 import { getTidePredictions } from '@/services/noaa';
 import { computeTimelinePredictions } from '@/services/tidePredictor';
+import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 
 interface Props {
   session: SurfSession;
@@ -30,6 +32,8 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResult
   const styles = useMemo(() => createStyles(colors), [colors]);
   const spots = useSpotStore((s) => s.spots);
   const similarSessions = useSimilarSessions(session, forecast);
+  const router = useRouter();
+  const setTargetDate = useNavigationStore((s) => s.setTargetDate);
   const [editing, setEditing] = useState(false);
   const [editTides, setEditTides] = useState<TidePrediction[]>([]);
   const [showDebrief, setShowDebrief] = useState(false);
@@ -146,7 +150,7 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResult
             ) : null}
           </View>
 
-          {/* Right: Edit + Sync + Log + X */}
+          {/* Right: Edit + Sync + Log + Forecast + X */}
           <View style={styles.cardActions}>
             {!isPast && !editing && (
               <>
@@ -161,6 +165,18 @@ export function SessionCard({ session, forecast, onDelete, onUpdate, onLogResult
                 <Text style={styles.editText}>Log</Text>
               </Pressable>
             )}
+            <Pressable
+              onPress={() => {
+                const d = new Date(session.planned_start);
+                d.setHours(0, 0, 0, 0);
+                setTargetDate(d);
+                router.navigate('/(tabs)/calendar');
+              }}
+              hitSlop={8}
+              style={styles.editBtn}
+            >
+              <Text style={styles.editText}>Forecast</Text>
+            </Pressable>
             <Pressable onPress={onDelete} hitSlop={8} style={styles.deleteBtn}>
               <Text style={styles.deleteText}>X</Text>
             </Pressable>

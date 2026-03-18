@@ -532,7 +532,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   windowConditions: {
     fontSize: 10,
     color: colors.textDim,
-    flex: 1,
   },
   scheduleButtonSmall: {
     width: 22,
@@ -541,6 +540,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 'auto',
   },
   // Full window card
   windowCard: {

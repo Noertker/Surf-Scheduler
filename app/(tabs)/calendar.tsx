@@ -4,11 +4,12 @@ import { DayCard } from '@/components/calendar/DayCard';
 import { DayDetail } from '@/components/calendar/DayDetail';
 import { Text } from '@/components/shared/Text';
 import { View } from '@/components/shared/View';
-import { useColors } from '@/hooks/useColors';
 import { ThemeColors } from '@/constants/theme';
-import { fetchSwellWithFallback, fetchWindWithFallback } from '@/services/forecasts';
+import { useColors } from '@/hooks/useColors';
 import { useThemeStore } from '@/hooks/useThemeStore';
+import { fetchSwellWithFallback, fetchWindWithFallback } from '@/services/forecasts';
 import { useGroupStore } from '@/stores/useGroupStore';
+import { useNavigationStore } from '@/stores/useNavigationStore';
 import { usePreferenceStore } from '@/stores/usePreferenceStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useTideStore } from '@/stores/useTideStore';
@@ -28,6 +29,9 @@ interface TimelineDay {
   dateKey: string;
 }
 
+const EMPTY_PREDICTIONS: import('@/types/tide').TidePrediction[] = [];
+const EMPTY_WINDOWS: import('@/types/tide').TideWindow[] = [];
+
 export default function DashboardScreen() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -43,8 +47,10 @@ export default function DashboardScreen() {
   } = useTideStore();
 
   const viewMode = useThemeStore((s) => s.calendarViewMode);
+  const { targetDate, setTargetDate } = useNavigationStore();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [highlightedDate, setHighlightedDate] = useState(new Date());
+  const flatListRef = useRef<FlatList<TimelineDay>>(null);
   const [wind, setWind] = useState<WindReading[]>([]);
   const [swell, setSwell] = useState<SwellReading[]>([]);
 
@@ -115,6 +121,31 @@ export default function DashboardScreen() {
     return days;
   }, []);
 
+  // Scroll to target date when navigating from sessions tab
+  const pendingScrollIdx = useRef<number | null>(null);
+  useEffect(() => {
+    if (!targetDate || !flatListRef.current) return;
+    const targetKey = localDateKey(targetDate);
+    const idx = timelineDays.findIndex((d) => d.dateKey === targetKey);
+    if (idx >= 0) {
+      pendingScrollIdx.current = idx;
+      flatListRef.current.scrollToIndex({ index: idx, animated: true });
+      setHighlightedDate(targetDate);
+    }
+    setTargetDate(null);
+  }, [targetDate, timelineDays]);
+
+  const onScrollToIndexFailed = useCallback((info: { index: number; averageItemLength: number }) => {
+    flatListRef.current?.scrollToOffset({ offset: info.index * info.averageItemLength, animated: false });
+    setTimeout(() => {
+      const idx = pendingScrollIdx.current;
+      if (idx != null && flatListRef.current) {
+        flatListRef.current.scrollToIndex({ index: idx, animated: true });
+        pendingScrollIdx.current = null;
+      }
+    }, 300);
+  }, []);
+
   const selectedDayData = useMemo(() => {
     if (!selectedDate) return { predictions: [], hiLo: [], windows: [] };
     const key = localDateKey(selectedDate);
@@ -157,9 +188,9 @@ export default function DashboardScreen() {
     ({ item }: { item: TimelineDay }) => (
       <DayCard
         date={item.date}
-        predictions={dayMap.get(item.dateKey) ?? []}
-        hiLo={hiLoMap.get(item.dateKey) ?? []}
-        windows={dayWindows.get(item.dateKey) ?? []}
+        predictions={dayMap.get(item.dateKey) ?? EMPTY_PREDICTIONS}
+        hiLo={hiLoMap.get(item.dateKey) ?? EMPTY_PREDICTIONS}
+        windows={dayWindows.get(item.dateKey) ?? EMPTY_WINDOWS}
         wind={wind}
         swell={swell}
         tideMin={representativePref?.tide_min_ft}
@@ -227,16 +258,19 @@ export default function DashboardScreen() {
           </View>
         ) : (
           <FlatList
+            ref={flatListRef}
             data={timelineDays}
             keyExtractor={keyExtractor}
             renderItem={renderTimelineItem}
             ListHeaderComponent={timelineHeader}
             stickyHeaderIndices={[0]}
             initialNumToRender={3}
-            maxToRenderPerBatch={3}
+            maxToRenderPerBatch={2}
             windowSize={5}
+            removeClippedSubviews
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
+            onScrollToIndexFailed={onScrollToIndexFailed}
           />
         )}
 
