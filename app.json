@@ -58,6 +58,12 @@
         "projectId": "bad9a064-4186-4049-8c02-e98d252d1841"
       }
     },
-    "owner": "noertker"
+    "owner": "noertker",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/bad9a064-4186-4049-8c02-e98d252d1841"
+    }
   }
 }
