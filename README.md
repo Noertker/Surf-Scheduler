@@ -78,6 +78,16 @@ To enable Google Calendar auto-sync:
    - `http://localhost:8081`
 6. Copy the Client ID and Client Secret into both `.env.local` files (see steps 3 and 4 above)
 
+## Deploying OTA Updates
+
+Push an over-the-air update to devices on the `preview` channel:
+
+```bash
+npm run ota "your update message"
+```
+
+This runs `eas update --branch preview --message "..."`.
+
 ## Project Structure
 
 ```
