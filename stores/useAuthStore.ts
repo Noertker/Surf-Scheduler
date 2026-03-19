@@ -7,6 +7,12 @@ import type { Session, User } from '@supabase/supabase-js';
 
 const PROVIDER_TOKEN_KEY = 'google_provider_token';
 const PROVIDER_REFRESH_KEY = 'google_provider_refresh_token';
+const PROVIDER_TOKEN_EXPIRY_KEY = 'google_provider_token_expiry';
+
+/** Buffer before expiry to proactively refresh (5 minutes) */
+const EXPIRY_BUFFER_MS = 5 * 60 * 1000;
+/** Default Google access token lifetime (1 hour) */
+const DEFAULT_TOKEN_LIFETIME_MS = 3600 * 1000;
 
 interface AuthState {
   session: Session | null;
@@ -23,7 +29,7 @@ interface AuthState {
   clearGoogleToken: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   session: null,
   user: null,
   loading: false,
@@ -38,6 +44,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Persist Google provider tokens when first received
       if (session?.provider_token) {
         await authStorage.setItem(PROVIDER_TOKEN_KEY, session.provider_token);
+        await authStorage.setItem(
+          PROVIDER_TOKEN_EXPIRY_KEY,
+          String(Date.now() + DEFAULT_TOKEN_LIFETIME_MS),
+        );
       }
       if (session?.provider_refresh_token) {
         await authStorage.setItem(PROVIDER_REFRESH_KEY, session.provider_refresh_token);
@@ -127,6 +137,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // (setSession doesn't include provider tokens in the session)
             if (provider_token) {
               await authStorage.setItem(PROVIDER_TOKEN_KEY, provider_token);
+              await authStorage.setItem(
+                PROVIDER_TOKEN_EXPIRY_KEY,
+                String(Date.now() + DEFAULT_TOKEN_LIFETIME_MS),
+              );
             }
             if (provider_refresh_token) {
               await authStorage.setItem(PROVIDER_REFRESH_KEY, decodeURIComponent(provider_refresh_token));
@@ -143,44 +157,64 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await supabase.auth.signOut();
     await authStorage.removeItem(PROVIDER_TOKEN_KEY);
     await authStorage.removeItem(PROVIDER_REFRESH_KEY);
+    await authStorage.removeItem(PROVIDER_TOKEN_EXPIRY_KEY);
     set({ session: null, user: null });
   },
 
   getGoogleAccessToken: async () => {
-    // 1. Check current session's provider_token (only set on initial sign-in)
-    const { session } = get();
-    if (session?.provider_token) return session.provider_token;
+    // Helper: check if stored token is still valid (with buffer)
+    const isTokenFresh = async (): Promise<boolean> => {
+      const expiry = await authStorage.getItem(PROVIDER_TOKEN_EXPIRY_KEY);
+      if (!expiry) return false;
+      return Date.now() < Number(expiry) - EXPIRY_BUFFER_MS;
+    };
 
-    // 2. Check locally stored access token
+    // Helper: persist a freshly obtained token + expiry
+    const saveToken = async (token: string, expiresInSec?: number) => {
+      const lifetimeMs = (expiresInSec ?? 3600) * 1000;
+      await authStorage.setItem(PROVIDER_TOKEN_KEY, token);
+      await authStorage.setItem(PROVIDER_TOKEN_EXPIRY_KEY, String(Date.now() + lifetimeMs));
+    };
+
+    // 1. Check locally stored access token (only if not expired)
     const stored = await authStorage.getItem(PROVIDER_TOKEN_KEY);
-    if (stored) return stored;
+    if (stored && (await isTokenFresh())) {
+      return stored;
+    }
 
-    // 3. Try refreshing the Supabase session (may return refreshed provider token)
+    // Token is missing or expired — clear stale value before refreshing
+    await authStorage.removeItem(PROVIDER_TOKEN_KEY);
+    await authStorage.removeItem(PROVIDER_TOKEN_EXPIRY_KEY);
+
+    // 2. Try refreshing the Supabase session (may return refreshed provider token)
     try {
       const { data } = await supabase.auth.refreshSession();
       if (data.session?.provider_token) {
-        await authStorage.setItem(PROVIDER_TOKEN_KEY, data.session.provider_token);
+        await saveToken(data.session.provider_token);
         return data.session.provider_token;
       }
-    } catch {
-      // fall through
+    } catch (err) {
+      console.warn('[GoogleAuth] Supabase session refresh failed:', err);
     }
 
-    // 4. Refresh via server-side Edge Function (keeps client_secret off the client)
+    // 3. Refresh via server-side Edge Function (keeps client_secret off the client)
     const refreshToken = await authStorage.getItem(PROVIDER_REFRESH_KEY);
     if (refreshToken) {
       try {
         const { data: fnData, error: fnError } = await supabase.functions.invoke(
           'refresh-google-token',
-          { body: { refresh_token: refreshToken } }
+          { body: { refresh_token: refreshToken } },
         );
         if (!fnError && fnData?.access_token) {
-          await authStorage.setItem(PROVIDER_TOKEN_KEY, fnData.access_token);
+          await saveToken(fnData.access_token, fnData.expires_in);
           return fnData.access_token as string;
         }
-      } catch {
-        // fall through
+        console.warn('[GoogleAuth] Edge function refresh failed:', fnError ?? fnData);
+      } catch (err) {
+        console.warn('[GoogleAuth] Edge function invocation failed:', err);
       }
+    } else {
+      console.warn('[GoogleAuth] No refresh token available — user must re-authenticate');
     }
 
     return null;
@@ -188,5 +222,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   clearGoogleToken: async () => {
     await authStorage.removeItem(PROVIDER_TOKEN_KEY);
+    await authStorage.removeItem(PROVIDER_TOKEN_EXPIRY_KEY);
+    // Also clear the stale provider_token from the in-memory session
+    set((state) => {
+      if (!state.session?.provider_token) return state;
+      return {
+        ...state,
+        session: { ...state.session, provider_token: undefined },
+      };
+    });
   },
 }));

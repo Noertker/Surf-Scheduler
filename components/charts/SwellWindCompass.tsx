@@ -13,6 +13,10 @@ interface Props {
   size?: number;
   /** Hide NESW labels and arrow value labels (compact tooltip mode) */
   hideLabels?: boolean;
+  /** Fixed swell scale (max heightFt*periodS) — keeps arrows consistent across a day */
+  fixedSwellScale?: number;
+  /** Fixed wind scale (max gust mph) — keeps arrows consistent across a day */
+  fixedWindScale?: number;
 }
 
 const CARDINAL = ['N', 'E', 'S', 'W'] as const;
@@ -65,6 +69,8 @@ export function SwellWindCompass({
   date,
   size = 200,
   hideLabels = false,
+  fixedSwellScale,
+  fixedWindScale,
 }: Props) {
   const colors = useColors();
   const cx = size / 2;
@@ -100,20 +106,31 @@ export function SwellWindCompass({
     return best;
   }, [wind, dayKey, date]);
 
-  // Compute max energy for scaling arrows
-  const maxEnergy = useMemo(() => {
+  // Separate scales for swell and wind so they don't affect each other.
+  // When fixedSwellScale/fixedWindScale are provided (e.g. from full-day data),
+  // use those so the scale stays constant as the user scrubs through time.
+  const maxSwellEnergy = useMemo(() => {
+    if (fixedSwellScale != null && fixedSwellScale > 0) return fixedSwellScale;
+    // Compute from ALL swell data in the array (full day), not just latest time
+    const dayComps = swellComponents.filter((c) => localDateKey(c.validAt) === dayKey);
     let max = 1;
-    for (const c of latestSwellComps) {
+    for (const c of dayComps) {
       const energy = c.heightFt * c.periodS;
       if (energy > max) max = energy;
     }
-    if (nearestWind) {
-      // Wind: use gusts * 3 to make comparable scale (gusts >= speed)
-      const gustEnergy = nearestWind.gustsMph * 3;
-      if (gustEnergy > max) max = gustEnergy;
+    return max;
+  }, [fixedSwellScale, swellComponents, dayKey]);
+
+  const maxWindSpeed = useMemo(() => {
+    if (fixedWindScale != null && fixedWindScale > 0) return fixedWindScale;
+    // Compute from ALL wind data for the day, not just the noon reading
+    const dayWindAll = wind.filter((w) => localDateKey(w.timestamp) === dayKey);
+    let max = 1;
+    for (const w of dayWindAll) {
+      if (w.gustsMph > max) max = w.gustsMph;
     }
     return max;
-  }, [latestSwellComps, nearestWind]);
+  }, [fixedWindScale, wind, dayKey]);
 
   if (latestSwellComps.length === 0 && !nearestWind) return null;
 
@@ -170,7 +187,7 @@ export function SwellWindCompass({
         {/* Swell arrows (one per component) */}
         {latestSwellComps.map((comp) => {
           const energy = comp.heightFt * comp.periodS;
-          const scale = Math.min(energy / maxEnergy, 1);
+          const scale = Math.min(energy / maxSwellEnergy, 1);
           const arrowLen = scale * outerR * 0.7; // how far toward center
           const thickness = Math.max(4, scale * 14);
           const tipR = outerR - arrowLen;
@@ -208,8 +225,7 @@ export function SwellWindCompass({
 
         {/* Wind gust arrow (lighter, behind speed arrow) */}
         {nearestWind && nearestWind.gustsMph > nearestWind.speedMph && (() => {
-          const gustEnergy = nearestWind.gustsMph * 3;
-          const gustScale = Math.min(gustEnergy / maxEnergy, 1);
+          const gustScale = Math.min(nearestWind.gustsMph / maxWindSpeed, 1);
           const gustLen = gustScale * outerR * 0.6;
           const gustThickness = Math.max(4, gustScale * 12);
           const gustTipR = outerR - gustLen;
@@ -225,8 +241,7 @@ export function SwellWindCompass({
 
         {/* Wind speed arrow */}
         {nearestWind && nearestWind.speedMph > 0 && (() => {
-          const windEnergy = nearestWind.speedMph * 3;
-          const scale = Math.min(windEnergy / maxEnergy, 1);
+          const scale = Math.min(nearestWind.speedMph / maxWindSpeed, 1);
           const arrowLen = scale * outerR * 0.6;
           const thickness = Math.max(3, scale * 10);
           const tipR = outerR - arrowLen;

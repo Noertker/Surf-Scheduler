@@ -213,6 +213,28 @@ function DayCardInner({
     }];
   }, [tooltipData?.wind, date]);
 
+  // Day-wide scales so compass arrows stay consistent while scrubbing through time
+  const dayMaxSwellEnergy = useMemo(() => {
+    let max = 1;
+    for (const s of daySwell) {
+      const energy = s.heightFt * s.periodS;
+      if (energy > max) max = energy;
+      if (s.secondaryHeightFt != null && s.secondaryPeriodS != null) {
+        const e2 = s.secondaryHeightFt * s.secondaryPeriodS;
+        if (e2 > max) max = e2;
+      }
+    }
+    return max;
+  }, [daySwell]);
+
+  const dayMaxWindMph = useMemo(() => {
+    let max = 1;
+    for (const w of dayWind) {
+      if (w.gustsMph > max) max = w.gustsMph;
+    }
+    return max;
+  }, [dayWind]);
+
   const tideHeight = compact ? 100 : 200;
   const windHeight = compact ? 70 : 140;
   const swellHeight = compact ? 80 : 160;
@@ -361,6 +383,8 @@ function DayCardInner({
                     date={date}
                     size={70}
                     hideLabels
+                    fixedSwellScale={dayMaxSwellEnergy}
+                    fixedWindScale={dayMaxWindMph}
                   />
                 </View>
               )}
